@@ -11,10 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pembayaran', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
+    Schema::create('pembayaran', function (Blueprint $table) {
+    $table->id('id_pembayaran');
+
+    $table->unsignedBigInteger('id_pesanan')->unique();
+
+    $table->timestamp('tanggal')->nullable();
+    $table->string('metode_pembayaran', 20);
+    $table->decimal('bayar', 12, 2);
+    $table->decimal('kembalian', 12, 2)->default(0);
+    $table->decimal('subtotal', 12, 2);
+    $table->decimal('total', 12, 2);
+
+    $table->foreign('id_pesanan')
+        ->references('id_pesanan')
+        ->on('pesanan')
+        ->cascadeOnDelete();
+});
     }
 
     /**
