@@ -106,7 +106,7 @@
             </div>
             @error('password') <div class="error">{{ $message }}</div> @enderror
 
-            <button type="submit" class="btn" id="submitBtn">Masuk Sekarang</button>
+            <button type="submit" class="btn" id="submitBtn">Masuk</button>
         </form>
 
         <a class="back" href="{{ url('/') }}">← Kembali ke Beranda</a>
