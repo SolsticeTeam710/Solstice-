@@ -33,6 +33,5 @@ Route::middleware(['auth', 'role:pelanggan'])->group(function () {
     })->name('pelanggan.menu');
 });
 
-Route::get('/login', function () {
-    return 'Halaman Login SOLSTICE COFFE';
-})->name('login');
+Route::get('/login', fn () => view('login'))->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.process');
