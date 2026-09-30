@@ -33,5 +33,10 @@ Route::middleware(['auth', 'role:pelanggan'])->group(function () {
     })->name('pelanggan.menu');
 });
 
-Route::get('/login', fn () => view('login'))->name('login');
+
+
+use App\Http\Controllers\AuthController;
+
+Route::get('/login', fn () => view('layouts.login'))->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

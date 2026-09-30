@@ -65,13 +65,16 @@
 <body>
     <div class="card">
         <div class="brand">
-            <div class="logo">
-                <img src="{{ asset('logo.png') }}" alt="Logo Solstice Coffe"
-                     onerror="this.remove(); this.parentNode.textContent='☕';">
-            </div>
-            <h1>Solstice Coffe</h1>
-            <p id="roleLabel">Kasir</p>
-        </div>
+    <div class="logo">
+        @if (file_exists(public_path('logo.png')))
+            <img src="{{ asset('logo.png.jpeg') }}" alt="Logo Solstice Coffe">
+        @else
+            ☕
+        @endif
+    </div>
+    <h1>Solstice Coffe</h1>
+    <p id="roleLabel">Kasir</p>
+</div>
 
         <form method="POST" action="{{ route('login.process') }}" novalidate>
             @csrf
