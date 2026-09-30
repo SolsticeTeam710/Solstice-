@@ -6,28 +6,15 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('meja', function (Blueprint $table) {
-    $table->id('id_meja');
-
-    $table->unsignedBigInteger('id_pesanan')->nullable();
-
-    $table->integer('no_meja');
-
-    $table->foreign('id_pesanan')
-        ->references('id_pesanan')
-        ->on('pesanan')
-        ->nullOnDelete();
-});
+            $table->id('id_meja');
+            $table->foreignId('id_pesanan')->nullable()->constrained('pesanan', 'id_pesanan')->onDelete('set null');
+            $table->integer('no_meja');
+        });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('meja');
