@@ -8,12 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('laporan', function (Blueprint $table) {
+    Schema::create('laporan', function (Blueprint $table) {
             $table->id('id_laporan');
             $table->date('periode');
-            $table->integer('total_transaksi');
-            $table->decimal('total_omzet', 12, 2);
-            $table->string('menu_terlaris')->nullable();
+            $table->integer('total_transaksi')->default(0);
+            $table->decimal('total_omzet', 12, 2)->default(0);
+            $table->string('menu_terlaris', 100)->nullable();
         });
     }
 

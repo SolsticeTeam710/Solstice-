@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\PesananController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
@@ -42,6 +43,7 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
 });
 
 Route::get('/menu', [MenuController::class, 'index'])->name('pelanggan.menu');
+Route::post('/api/pesanan', [PesananController::class, 'store']);
 
 // Endpoints API yang sudah tersedia.
 Route::middleware(['auth', 'role:kasir,admin'])->prefix('api/kasir')->group(function () {

@@ -23,14 +23,14 @@ class PesananController extends Controller
             'tanggal' => now(),
             'total_harga' => $request->total_harga,
             'catatan' => $request->catatan,
-            'status' => 'PENDING_PAYMENT',
+            'status' => 'pending',
         ], 'id_pesanan');
 
         return response()->json([
             'message' => 'Pesanan berhasil dibuat',
             'order_id' => $orderId,
             'id_pesanan' => $idPesanan,
-            'status' => 'PENDING_PAYMENT'
+            'status' => 'pending'
         ], 201);
     }
 
