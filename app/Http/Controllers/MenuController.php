@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -16,7 +18,7 @@ class MenuController extends Controller
         return response()->json($menu);
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         $menu = DB::table('menu')
             ->where('id_menu', $id)

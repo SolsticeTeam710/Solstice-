@@ -1,104 +1,77 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-Route::get('/', function () {
-    return view('welcome');
-});
-
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\KasirController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\MenuController;
+use App\Http\Controllers\PesananController;
 
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+*/
+
+// Public Routes
+Route::get('/', fn () => view('welcome'));
 Route::get('/health', [HealthController::class, 'check']);
 
-Route::middleware(['auth', 'role:admin'])->group(function () {
+// Autentikasi (Guest / Belum Login)
+Route::middleware('guest')->group(function () {
+    Route::get('/login', fn () => view('layouts.login'))->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+});
 
+// Logout (Harus Login)
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+/*
+|--------------------------------------------------------------------------
+| Protected Web Routes (Berdasarkan Role)
+|--------------------------------------------------------------------------
+*/
+
+// Role: Admin
+Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard', function () {
         return 'Dashboard Admin SOLSTICE COFFE';
     })->name('admin.dashboard');
-
 });
 
+// Role: Kasir
 Route::middleware(['auth', 'role:kasir'])->group(function () {
-
     Route::get('/kasir/dashboard', function () {
         return 'Dashboard Kasir SOLSTICE COFFE';
     })->name('kasir.dashboard');
-
 });
 
-Route::middleware(['auth', 'role:pelanggan'])->group(function () {
+// Public Routes (Bisa diakses langsung oleh Pelanggan via QR Code)
+Route::get('/menu', [MenuController::class, 'index'])->name('pelanggan.menu');
+Route::post('/api/pesanan', [PesananController::class, 'store']); // Pelanggan kirim pesanan
 
-    Route::get('/menu', function () {
-        return 'Menu Digital SOLSTICE COFFE';
-    })->name('pelanggan.menu');
+/*
+|--------------------------------------------------------------------------
+| Internal API Routes (Terproteksi Middleware Role)
+|--------------------------------------------------------------------------
+*/
+
+// API Endpoints Kasir
+Route::middleware(['auth', 'role:kasir,admin'])->prefix('api/kasir')->group(function () {
+    Route::get('/dashboard', [KasirController::class, 'dashboard']);
+    Route::get('/orders', [KasirController::class, 'orders']);
+    Route::get('/orders/{orderId}', [KasirController::class, 'search']);
+    Route::put('/orders/{orderId}/verify', [KasirController::class, 'verifyPayment']);
 });
 
-
-
-use App\Http\Controllers\AuthController;
-
-Route::get('/login', fn () => view('layouts.login'))->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.process');
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
-
-use App\Http\Controllers\KasirController;
-use App\Http\Controllers\AdminController;
-
-// =========================
-// KASIR
-// =========================
-
-Route::get('/api/kasir/dashboard', [KasirController::class, 'dashboard']);
-
-Route::get('/api/kasir/orders', [KasirController::class, 'orders']);
-
-Route::get(
-    '/api/kasir/orders/{orderId}',
-    [KasirController::class, 'search']
-);
-
-Route::put(
-    '/api/kasir/orders/{orderId}/verify',
-    [KasirController::class, 'verifyPayment']
-);
-
-
-// =========================
-// ADMIN
-// =========================
-
-Route::get(
-    '/api/admin/dashboard',
-    [AdminController::class, 'dashboard']
-);
-
-Route::get(
-    '/api/admin/users',
-    [AdminController::class, 'users']
-);
-
-Route::get(
-    '/api/admin/menu',
-    [AdminController::class, 'menu']
-);
-
-Route::get(
-    '/api/admin/kategori',
-    [AdminController::class, 'kategori']
-);
-
-Route::get(
-    '/api/admin/stok',
-    [AdminController::class, 'stok']
-);
-
-Route::get(
-    '/api/admin/stok-menipis',
-    [AdminController::class, 'stokMenipis']
-);
-
-Route::get(
-    '/api/admin/laporan',
-    [AdminController::class, 'laporan']
-);
+// API Endpoints Admin
+Route::middleware(['auth', 'role:admin'])->prefix('api/admin')->group(function () {
+    Route::get('/dashboard', [AdminController::class, 'dashboard']);
+    Route::get('/users', [AdminController::class, 'users']);
+    Route::get('/menu', [AdminController::class, 'menu']);
+    Route::get('/kategori', [AdminController::class, 'kategori']);
+    Route::get('/stok', [AdminController::class, 'stok']);
+    Route::get('/stok-menipis', [AdminController::class, 'stokMenipis']);
+    Route::get('/laporan', [AdminController::class, 'laporan']);
+});
