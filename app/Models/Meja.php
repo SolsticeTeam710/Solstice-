@@ -12,6 +12,8 @@ class Meja extends Model
     protected $table = 'meja';
     protected $primaryKey = 'id_meja';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'nomor_meja',
         'status',

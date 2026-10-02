@@ -12,6 +12,8 @@ class DetailPesanan extends Model
     protected $table = 'detail_pesanan';
     protected $primaryKey = 'id_detail';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'id_pesanan',
         'id_menu',

@@ -15,6 +15,8 @@ class Kategori extends Model
     // Primary key kustom
     protected $primaryKey = 'id_kategori';
 
+    public $timestamps = false;
+
     // Kolom yang diizinkan untuk diisi data (Mass Assignment)
     protected $fillable = [
         'nama_kategori',
