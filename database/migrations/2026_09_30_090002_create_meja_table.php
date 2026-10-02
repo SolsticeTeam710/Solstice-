@@ -15,6 +15,7 @@ return new class extends Migration
                 ->constrained('pesanan', 'id_pesanan')
                 ->nullOnDelete();
             $table->integer('nomor_meja')->unique();
+            $table->string('status', 20)->default('kosong');
         });
     }
 
