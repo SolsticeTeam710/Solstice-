@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 
 class AuthController extends Controller
 {
@@ -17,6 +19,18 @@ class AuthController extends Controller
 
         // Boleh login pakai email atau username
         $field = filter_var($data['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
+        // Nama lengkap juga diterima agar "Budi Santoso" bisa dipakai di kolom username.
+        if ($field === 'username') {
+            $userQuery = User::where('username', $data['login']);
+            if (Schema::hasColumn('users', 'name')) {
+                $userQuery->orWhere('name', $data['login']);
+            }
+            $user = $userQuery->first();
+            if ($user) {
+                $data['login'] = $user->username;
+            }
+        }
 
         $credentials = [
             $field     => $data['login'],

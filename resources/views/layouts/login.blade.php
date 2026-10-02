@@ -93,13 +93,13 @@
 
             <label for="login">Email atau Username</label>
             <input type="text" id="login" name="login" value="{{ old('login') }}"
-                   placeholder="kasir_budi" autocomplete="username" required autofocus
+                   placeholder="kasir" autocomplete="username" required autofocus
                    class="{{ $errors->has('login') ? 'invalid' : '' }}">
             @error('login') <div class="error">{{ $message }}</div> @enderror
 
             <label for="password">Password</label>
             <div class="field">
-                <input type="password" id="password" name="password" placeholder="••••••••"
+                <input type="password" id="password" name="password" placeholder="........"
                        autocomplete="current-password" required
                        class="{{ $errors->has('password') ? 'invalid' : '' }}">
                 <button type="button" class="toggle" id="togglePw" aria-label="Tampilkan password">👁</button>
@@ -121,7 +121,7 @@
             const isKasir = role === 'kasir';
             document.getElementById('roleLabel').textContent = isKasir ? 'Kasir' : 'Admin';
             document.getElementById('title').textContent = isKasir ? 'Login Kasir' : 'Login Admin';
-            document.getElementById('login').placeholder = isKasir ? 'kasir_budi' : 'solsticeteam@gmail.com';
+            document.getElementById('login').placeholder = isKasir ? 'kasir' : 'admin';
             document.getElementById('submitBtn').textContent = isKasir ? 'Masuk Sekarang' : 'Masuk';
             tabs.forEach(t => t.classList.toggle('active', t.dataset.role === role));
         }
