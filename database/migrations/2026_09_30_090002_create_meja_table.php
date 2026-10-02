@@ -10,7 +10,10 @@ return new class extends Migration
     {
         Schema::create('meja', function (Blueprint $table) {
             $table->id('id_meja');
-            $table->foreignId('id_pesanan')->nullable()->constrained('pesanan', 'id_pesanan')->onDelete('set null');
+            $table->foreignId('id_pesanan')
+                ->nullable()
+                ->constrained('pesanan', 'id_pesanan')
+                ->nullOnDelete();
             $table->integer('no_meja');
         });
     }
