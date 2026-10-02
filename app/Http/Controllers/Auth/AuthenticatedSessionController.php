@@ -1,13 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 
-class AuthController extends Controller
+class AuthenticatedSessionController extends Controller
 {
     public function login(Request $request)
     {
@@ -18,7 +19,10 @@ class AuthController extends Controller
         ]);
 
         // Boleh login pakai email atau username
-        $field = filter_var($data['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $hasEmailColumn = Schema::hasColumn('users', 'email');
+        $field = $hasEmailColumn && filter_var($data['login'], FILTER_VALIDATE_EMAIL)
+            ? 'email'
+            : 'username';
 
         // Nama lengkap juga diterima agar "Budi Santoso" bisa dipakai di kolom username.
         if ($field === 'username') {
@@ -39,6 +43,19 @@ class AuthController extends Controller
         ];
 
         if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+            $status = mb_strtolower((string) ($user->status ?? 'aktif'));
+            $statusIsActive = in_array($status, ['aktif', 'active'], true);
+            $flagIsActive = ! Schema::hasColumn('users', 'is_active') || (bool) $user->is_active;
+
+            if (! $statusIsActive || ! $flagIsActive) {
+                Auth::logout();
+
+                return back()
+                    ->withInput($request->only('login', 'role'))
+                    ->withErrors(['login' => 'Akun ini tidak aktif. Hubungi administrator.']);
+            }
+
             $request->session()->regenerate();
 
             return Auth::user()->role === 'admin'

@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id('id_users');
-            $table->string('username');
-            $table->string('password');
-            $table->enum('role', ['admin', 'kasir', 'pelanggan', 'dapur'])->default('pelanggan');
-            $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
-            $table->timestamp('created_at')->nullable();
+            $table->string('username', 100)->unique();
+            $table->string('password', 255);
+            $table->string('role', 20)->default('kasir');
+            $table->string('status', 20)->default('aktif');
+            $table->timestamp('created_at')->useCurrent();
         });
     }
 

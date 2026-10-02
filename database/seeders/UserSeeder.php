@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
             ->first(fn ($c) => in_array($c, $columns));
 
         // Beri peringatan kalau kolom penting tidak ada
-        foreach (['username', 'role', 'is_active'] as $needed) {
+        foreach (['username', 'role', 'status'] as $needed) {
             if (! in_array($needed, $columns)) {
                 $this->command->warn("Kolom '{$needed}' tidak ada di tabel users, login berdasarkan kolom ini tidak akan jalan.");
             }
@@ -30,8 +30,8 @@ class UserSeeder extends Seeder
         }
 
         $users = [
-            ['username' => 'admin', 'password' => 'admin123', 'nama' => 'Admin Utama', 'email' => 'solsticeteam@gmail.com', 'role' => 'admin'],
-            ['username' => 'kasir', 'password' => 'kasir123', 'nama' => 'Budi Santoso', 'email' => 'budi.santoso@kopiku.id', 'role' => 'kasir'],
+            ['username' => 'admin', 'password' => 'password', 'nama' => 'Admin Utama', 'email' => null, 'role' => 'admin'],
+            ['username' => 'kasir1', 'password' => 'password', 'nama' => 'Kasir 1', 'email' => null, 'role' => 'kasir'],
         ];
 
         foreach ($users as $u) {
@@ -40,6 +40,7 @@ class UserSeeder extends Seeder
                 'email'      => $u['email'],
                 'password'   => Hash::make($u['password']),
                 'role'       => $u['role'],
+                'status'     => 'aktif',
                 'is_active'  => true,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -60,6 +61,6 @@ class UserSeeder extends Seeder
             DB::table('users')->updateOrInsert($key, $row);
         }
 
-        $this->command->info('Login Admin: admin / admin123 | Login Kasir: kasir / kasir123');
+        $this->command->info('Login Admin: admin / password | Login Kasir: kasir1 / password');
     }
 }

@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('detail_pesanan', function (Blueprint $table) {
             $table->id('id_detail_pesanan');
-            $table->foreignId('id_pesanan')->constrained('pesanan', 'id_pesanan')->onDelete('cascade');
-            $table->foreignId('id_menu')->constrained('menu', 'id_menu')->onDelete('cascade');
-            $table->integer('jumlah_pesanan');
-            $table->decimal('harga_satuan', 10, 2);
-            $table->decimal('subtotal', 10, 2);
+            $table->foreignId('id_pesanan')->constrained('pesanan', 'id_pesanan')->cascadeOnDelete();
+            $table->foreignId('id_menu')->constrained('menu', 'id_menu')->restrictOnDelete();
+            $table->integer('jumlah_pesanan')->default(1);
+            $table->decimal('harga_satuan', 12, 2);
+            $table->decimal('subtotal', 12, 2);
         });
     }
 

@@ -66,8 +66,8 @@
     <div class="card">
         <div class="brand">
     <div class="logo">
-        @if (file_exists(public_path('logo.png.jpeg')))
-            <img src="{{ asset('logo.png.jpeg') }}" alt="Logo Solstice Coffe">
+        @if (file_exists(public_path('images/solstice-logo.jpeg')))
+            <img src="{{ asset('images/solstice-logo.jpeg') }}" alt="Logo Solstice Coffe">
         @else
             ☕
         @endif

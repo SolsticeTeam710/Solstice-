@@ -10,13 +10,13 @@ return new class extends Migration
     {
         Schema::create('pembayaran', function (Blueprint $table) {
             $table->id('id_pembayaran');
-            $table->foreignId('id_pesanan')->constrained('pesanan', 'id_pesanan')->onDelete('cascade');
-            $table->dateTime('tanggal');
-            $table->enum('metode_pembayaran', ['cash', 'qris', 'transfer', 'debit']);
-            $table->decimal('bayar', 10, 2);
-            $table->decimal('kembalian', 10, 2);
-            $table->decimal('subtotal', 10, 2);
-            $table->decimal('total', 10, 2);
+            $table->foreignId('id_pesanan')->unique()->constrained('pesanan', 'id_pesanan')->cascadeOnDelete();
+            $table->timestamp('tanggal')->useCurrent();
+            $table->string('metode_pembayaran', 20);
+            $table->decimal('bayar', 12, 2);
+            $table->decimal('kembalian', 12, 2)->default(0);
+            $table->decimal('subtotal', 12, 2);
+            $table->decimal('total', 12, 2);
         });
     }
 

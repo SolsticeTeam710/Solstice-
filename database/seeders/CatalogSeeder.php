@@ -10,8 +10,16 @@ class CatalogSeeder extends Seeder
     public function run(): void
     {
         $categories = [];
-        foreach (['Kopi','Non-Kopi','Makanan'] as $name) {
-            $category = DB::table('kategori')->where('nama_kategori',$name)->first();
+        $categoryAliases = [
+            'Coffee' => ['coffee', 'kopi'],
+            'Non-Coffee' => ['non-coffee', 'non coffee', 'non-kopi'],
+            'Makanan' => ['makanan'],
+        ];
+
+        foreach ($categoryAliases as $name => $aliases) {
+            $category = DB::table('kategori')
+                ->whereIn(DB::raw('LOWER(nama_kategori)'), $aliases)
+                ->first();
             if (! $category) {
                 $id = DB::table('kategori')->insertGetId(['nama_kategori'=>$name], 'id_kategori');
                 $category = (object) ['id_kategori'=>$id];
@@ -20,9 +28,9 @@ class CatalogSeeder extends Seeder
         }
 
         $menus = [
-            ['Ice Kopi Susu Aren','Kopi',18000,150,20],
-            ['Ice Caramel Macchiato','Kopi',24000,85,15],
-            ['Matcha Latte','Non-Kopi',22000,120,15],
+            ['Ice Kopi Susu Aren','Coffee',18000,150,20],
+            ['Ice Caramel Macchiato','Coffee',24000,85,15],
+            ['Matcha Latte','Non-Coffee',22000,120,15],
             ['Almond Croissant','Makanan',20000,12,5],
             ['Nasi Goreng Kampung','Makanan',28000,0,5],
         ];

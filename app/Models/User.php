@@ -13,8 +13,20 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    protected $table = 'users';
     protected $primaryKey = 'id_users';
-    protected $fillable = ['name', 'email', 'password', 'username', 'role', 'is_active'];
+    public $timestamps = false;
+
+    protected $fillable = [
+        'username',
+        'password',
+        'role',
+        'status',
+        // Optional profile columns supported by the admin UI migration.
+        'name',
+        'email',
+        'is_active',
+    ];
     protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
-use App\Models\User;
+use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
-    private array $defaultCategories = ['Kopi', 'Non-Kopi', 'Makanan'];
+    private array $defaultCategories = ['Coffee', 'Non-Coffee', 'Makanan'];
 
     public function dashboard()
     {
@@ -42,7 +42,7 @@ class AdminController extends Controller
             ['Menu dan kategori dikelola', 'Hari ini', 'Data menu sekarang tersimpan ke database'],
             ['Pembaruan stok', 'Hari ini', 'Periksa halaman Kelola Stok untuk melihat bahan kritis'],
         ];
-        return view('layouts.dashboard', compact('weekly', 'logs', 'stats'));
+        return view('admin.dashboard', compact('weekly', 'logs', 'stats'));
     }
 
     public function dashboardData()
@@ -57,13 +57,24 @@ class AdminController extends Controller
     public function menus(Request $request)
     {
         $this->ensureDefaultCategories();
-        $categories = DB::table('kategori')->orderBy('nama_kategori')->get();
+        $categories = DB::table('kategori')->orderBy('nama_kategori')->get()->map(function ($category) {
+            $category->display_name = $this->categoryLabel($category->nama_kategori);
+            return $category;
+        });
         $query = DB::table('menu')->join('kategori', 'menu.id_kategori', '=', 'kategori.id_kategori')
             ->select('menu.*', 'kategori.nama_kategori');
-        if ($request->filled('kategori')) $query->where('kategori.nama_kategori', $request->query('kategori'));
+        if ($request->filled('kategori')) {
+            $category = mb_strtolower($request->query('kategori'));
+            $aliases = match ($category) {
+                'kopi', 'coffee' => ['kopi', 'coffee'],
+                'non-kopi', 'non-coffee', 'non coffee' => ['non-kopi', 'non-coffee', 'non coffee'],
+                default => [$category],
+            };
+            $query->whereIn(DB::raw('LOWER(kategori.nama_kategori)'), $aliases);
+        }
         $menus = $query->orderBy('menu.nama_menu')->get()->map(fn ($item) => [
             'id' => $item->id_menu, 'nama' => $item->nama_menu, 'kategori_id' => $item->id_kategori,
-            'kategori' => $item->nama_kategori, 'harga' => (float) $item->harga, 'stok' => $item->stok,
+            'kategori' => $this->categoryLabel($item->nama_kategori), 'harga' => (float) $item->harga, 'stok' => $item->stok,
             'minimum' => $item->batas_minimum, 'deskripsi' => $item->deskripsi,
             'aktif' => $item->status === 'tersedia',
         ])->all();
@@ -118,7 +129,9 @@ class AdminController extends Controller
     {
         $columns = Schema::getColumnListing('users');
         $users = DB::table('users')->whereIn('role',['admin','kasir'])->orderBy('username')->get()->map(function ($user) use ($columns) {
-            $active = in_array('is_active', $columns) ? (bool) $user->is_active : (($user->status ?? 'aktif') === 'aktif');
+            $active = in_array('is_active', $columns)
+                ? (bool) $user->is_active
+                : in_array(mb_strtolower((string) ($user->status ?? 'aktif')), ['aktif', 'active'], true);
             return ['id'=>$user->id_users, 'nama'=>in_array('name',$columns) && $user->name ? $user->name : $user->username,
                 'username'=>$user->username, 'email'=>in_array('email',$columns) ? ($user->email ?? '') : '',
                 'jabatan'=>ucfirst($user->role), 'role'=>$user->role, 'aktif'=>$active];
@@ -169,7 +182,9 @@ class AdminController extends Controller
         if (! $user) return back()->with('error','Akun tidak ditemukan.');
         if ((int) auth()->id() === $id) return back()->with('error','Status akun yang sedang digunakan tidak dapat diubah.');
         $columns = Schema::getColumnListing('users');
-        $isActive = in_array('is_active',$columns) ? (bool) $user->is_active : (($user->status ?? 'aktif') === 'aktif');
+        $isActive = in_array('is_active',$columns)
+            ? (bool) $user->is_active
+            : in_array(mb_strtolower((string) ($user->status ?? 'aktif')), ['aktif', 'active'], true);
         $values = [];
         if (in_array('is_active',$columns)) $values['is_active'] = ! $isActive;
         if (in_array('status',$columns)) $values['status'] = $isActive ? 'nonaktif' : 'aktif';
@@ -289,8 +304,25 @@ class AdminController extends Controller
 
     private function ensureDefaultCategories(): void
     {
+        $aliases = [
+            'Coffee' => ['coffee', 'kopi'],
+            'Non-Coffee' => ['non-coffee', 'non coffee', 'non-kopi'],
+            'Makanan' => ['makanan'],
+        ];
+
         foreach ($this->defaultCategories as $name) {
-            if (! DB::table('kategori')->where('nama_kategori',$name)->exists()) DB::table('kategori')->insert(['nama_kategori'=>$name]);
+            if (! DB::table('kategori')->whereIn(DB::raw('LOWER(nama_kategori)'), $aliases[$name])->exists()) {
+                DB::table('kategori')->insert(['nama_kategori' => $name]);
+            }
         }
+    }
+
+    private function categoryLabel(string $name): string
+    {
+        return match (mb_strtolower($name)) {
+            'coffee' => 'Kopi',
+            'non-coffee', 'non coffee' => 'Non-Kopi',
+            default => $name,
+        };
     }
 }

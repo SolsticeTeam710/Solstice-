@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('menu', function (Blueprint $table) {
             $table->id('id_menu');
-            $table->foreignId('id_kategori')->constrained('kategori', 'id_kategori')->onDelete('cascade');
-            $table->string('nama_menu');
-            $table->decimal('harga', 10, 2);
-            $table->string('foto')->nullable();
-            $table->enum('status', ['tersedia', 'habis'])->default('tersedia');
+            $table->foreignId('id_kategori')->nullable()->constrained('kategori', 'id_kategori')->nullOnDelete();
+            $table->string('nama_menu', 75);
+            $table->decimal('harga', 12, 2)->default(0);
+            $table->string('foto', 255)->nullable();
+            $table->string('status', 20)->default('tersedia');
             $table->text('deskripsi')->nullable();
             $table->integer('stok')->default(0);
             $table->integer('batas_minimum')->default(0);

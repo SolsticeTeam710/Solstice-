@@ -13,11 +13,11 @@ class KasirController extends Controller
         $jumlahPesanan = DB::table('pesanan')->count();
 
         $pending = DB::table('pesanan')
-            ->where('status', 'PENDING_PAYMENT')
+            ->where('status', 'pending')
             ->count();
 
         $processing = DB::table('pesanan')
-            ->where('status', 'PROCESSING')
+            ->where('status', 'diproses')
             ->count();
 
         return response()->json([
@@ -69,13 +69,13 @@ class KasirController extends Controller
         DB::table('pesanan')
             ->where('order_id', $orderId)
             ->update([
-                'status' => 'PROCESSING'
+                'status' => 'diproses'
             ]);
 
         return response()->json([
             'message' => 'Pembayaran berhasil diverifikasi',
             'order_id' => $orderId,
-            'status' => 'PROCESSING'
+            'status' => 'diproses'
         ]);
     }
 }
