@@ -14,7 +14,7 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('pesanan', 'id_pesanan')
                 ->nullOnDelete();
-            $table->integer('no_meja');
+            $table->integer('no_meja')->unique();
         });
     }
 
