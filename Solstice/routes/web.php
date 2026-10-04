@@ -30,7 +30,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('/pengguna/{id}', [AdminController::class, 'deleteUser'])->name('users.delete');
     Route::patch('/pengguna/{id}/status', [AdminController::class, 'toggleUserStatus'])->name('users.status');
     Route::get('/stok', [AdminController::class, 'stockPage'])->name('stock');
-    Route::post('/stok', [AdminController::class, 'storeStock'])->name('stock.store');
     Route::put('/stok/{id}', [AdminController::class, 'updateStock'])->name('stock.update');
     Route::get('/stok/kritis', [AdminController::class, 'criticalStockPage'])->name('stock.critical');
     Route::get('/laporan', [AdminController::class, 'reportsPage'])->name('reports');

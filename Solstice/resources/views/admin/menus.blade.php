@@ -1,6 +1,7 @@
 @extends('layouts.panel')
 @section('title', 'Kelola Menu')
 @section('content')
+@include('admin.partials.menu-stock-tabs')
 <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
     <div class="flex flex-wrap gap-2">
         <a href="{{ route('admin.menus') }}" class="rounded-full px-3 py-1.5 text-xs font-semibold {{ request('kategori') ? 'bg-cream text-brand' : 'bg-brand text-white' }}">Semua</a>

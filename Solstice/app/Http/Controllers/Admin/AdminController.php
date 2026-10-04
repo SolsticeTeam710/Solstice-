@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -31,16 +32,16 @@ class AdminController extends Controller
         $userTotal = DB::table('users')->count();
         $adminTotal = DB::table('users')->where('role','admin')->count();
         $cashierTotal = DB::table('users')->where('role','kasir')->count();
-        $lowStock = Schema::hasTable('bahan_baku') ? DB::table('bahan_baku')->whereColumn('stok','<=','stok_minimum')->count() : 0;
+        $lowStock = DB::table('menu')->whereRaw('COALESCE(stok, 0) <= COALESCE(batas_minimum, 0)')->count();
         $stats = [
             ['Total Varian Menu', $menuTotal.' Menu', 'text-brand', $activeMenus.' menu tersedia', 'text-ok', false],
             ['Total Pengguna (Staf)', $userTotal.' User', 'text-brand', $adminTotal.' Admin · '.$cashierTotal.' Kasir', 'text-muted', false],
             ['Penjualan Hari Ini', 'Rp '.number_format($todayRevenue,0,',','.'), 'text-brand', 'Total pembayaran hari ini', 'text-ok', false],
-            ['Stok Menipis', $lowStock.' Bahan', 'text-warn', $lowStock ? 'Perlu diperiksa' : 'Semua stok aman', 'text-muted', true],
+            ['Stok Menipis', $lowStock.' Menu', 'text-warn', $lowStock ? 'Perlu diperiksa' : 'Semua stok aman', 'text-muted', true],
         ];
         $logs = [
             ['Menu dan kategori dikelola', 'Hari ini', 'Data menu sekarang tersimpan ke database'],
-            ['Pembaruan stok', 'Hari ini', 'Periksa halaman Kelola Stok untuk melihat bahan kritis'],
+            ['Pembaruan stok', 'Hari ini', 'Periksa halaman Kelola Stok untuk melihat menu dengan stok kritis'],
         ];
         return view('admin.dashboard', compact('weekly', 'logs', 'stats'));
     }
@@ -50,7 +51,7 @@ class AdminController extends Controller
         return response()->json([
             'menu' => DB::table('menu')->count(),
             'pengguna' => DB::table('users')->count(),
-            'stok_menipis' => Schema::hasTable('bahan_baku') ? DB::table('bahan_baku')->whereColumn('stok', '<=', 'stok_minimum')->count() : 0,
+            'stok_menipis' => DB::table('menu')->whereRaw('COALESCE(stok, 0) <= COALESCE(batas_minimum, 0)')->count(),
         ]);
     }
 
@@ -61,7 +62,7 @@ class AdminController extends Controller
             $category->display_name = $this->categoryLabel($category->nama_kategori);
             return $category;
         });
-        $query = DB::table('menu')->join('kategori', 'menu.id_kategori', '=', 'kategori.id_kategori')
+        $query = DB::table('menu')->leftJoin('kategori', 'menu.id_kategori', '=', 'kategori.id_kategori')
             ->select('menu.*', 'kategori.nama_kategori');
         if ($request->filled('kategori')) {
             $category = mb_strtolower($request->query('kategori'));
@@ -74,8 +75,13 @@ class AdminController extends Controller
         }
         $menus = $query->orderBy('menu.nama_menu')->get()->map(fn ($item) => [
             'id' => $item->id_menu, 'nama' => $item->nama_menu, 'kategori_id' => $item->id_kategori,
-            'kategori' => $this->categoryLabel($item->nama_kategori), 'harga' => (float) $item->harga, 'stok' => $item->stok,
-            'minimum' => $item->batas_minimum, 'deskripsi' => $item->deskripsi,
+            'kategori' => $item->nama_kategori
+                ? $this->categoryLabel($item->nama_kategori)
+                : 'Tanpa kategori',
+            'harga' => (float) $item->harga,
+            'stok' => $item->stok,
+            'minimum' => $item->batas_minimum,
+            'deskripsi' => $item->deskripsi,
             'aktif' => $item->status === 'tersedia',
         ])->all();
         return view('admin.menus', compact('menus', 'categories'));
@@ -102,11 +108,16 @@ class AdminController extends Controller
             'harga' => ['required','numeric','min:0'], 'stok' => ['required','integer','min:0'],
             'batas_minimum' => ['nullable','integer','min:0'], 'deskripsi' => ['nullable','string','max:2000'],
         ]);
+
+        if (! DB::table('menu')->where('id_menu', $id)->exists()) {
+            return back()->with('error', 'Menu tidak ditemukan.');
+        }
+
         $data['batas_minimum'] = $data['batas_minimum'] ?? 0;
         DB::table('menu')->where('id_menu', $id)->update($data + ['status' => $data['stok'] > 0 ? 'tersedia' : 'habis']);
+
         return back()->with('success', 'Menu berhasil diperbarui.');
     }
-
     public function deleteMenu(int $id)
     {
         if (Schema::hasTable('detail_pesanan') && DB::table('detail_pesanan')->where('id_menu', $id)->exists()) {
@@ -169,7 +180,7 @@ class AdminController extends Controller
     {
         $target = DB::table('users')->where('id_users', $id)->first();
         if (! $target) return back()->with('error', 'Akun tidak ditemukan.');
-        if ((int) auth()->id() === $id) return back()->with('error', 'Akun yang sedang digunakan tidak dapat dihapus.');
+        if ((int) Auth::id() === $id) return back()->with('error', 'Akun yang sedang digunakan tidak dapat dihapus.');
         if ($target->role === 'admin' && DB::table('users')->where('role','admin')->count() <= 1) return back()->with('error', 'Tidak dapat menghapus satu-satunya admin.');
         if (Schema::hasTable('pesanan') && DB::table('pesanan')->where('id_users',$id)->exists()) return back()->with('error', 'Akun ini memiliki riwayat pesanan, jadi tidak dapat dihapus. Nonaktifkan akunnya saja.');
         DB::table('users')->where('id_users', $id)->delete();
@@ -180,7 +191,7 @@ class AdminController extends Controller
     {
         $user = DB::table('users')->where('id_users',$id)->first();
         if (! $user) return back()->with('error','Akun tidak ditemukan.');
-        if ((int) auth()->id() === $id) return back()->with('error','Status akun yang sedang digunakan tidak dapat diubah.');
+        if ((int) Auth::id() === $id) return back()->with('error', 'Status akun yang sedang digunakan tidak dapat diubah.');
         $columns = Schema::getColumnListing('users');
         $isActive = in_array('is_active',$columns)
             ? (bool) $user->is_active
@@ -207,47 +218,73 @@ class AdminController extends Controller
 
     public function stockPage(Request $request)
     {
-        $this->requireStockTable();
-        $query = DB::table('bahan_baku');
-        if ($request->filled('kategori')) $query->where('kategori', $request->query('kategori'));
-        $stockCategories = DB::table('bahan_baku')->distinct()->orderBy('kategori')->pluck('kategori');
-        $stocks = $query->orderBy('nama_bahan')->get()->map(fn ($item) => [
-            'id'=>$item->id_bahan,'nama'=>$item->nama_bahan,'jumlah'=>$item->stok.' '.$item->satuan,
-            'stok'=>$item->stok,'satuan'=>$item->satuan,'minimum'=>$item->stok_minimum.' '.$item->satuan,
-            'stok_minimum'=>$item->stok_minimum,'kategori'=>$item->kategori,
-            'status'=>$item->stok <= 0 ? 'Habis' : ($item->stok <= $item->stok_minimum ? 'Menipis' : 'Aman'),
-        ])->all();
-        return view('admin.stock', compact('stocks','stockCategories'));
-    }
+        $stockCategories = DB::table('kategori')
+            ->orderBy('nama_kategori')
+            ->pluck('nama_kategori');
 
-    public function storeStock(Request $request)
-    {
-        $this->requireStockTable();
-        $data = $request->validate(['nama_bahan'=>['required','string','max:150','unique:bahan_baku,nama_bahan'],'kategori'=>['required','string','max:80'],'satuan'=>['required','string','max:30'],'stok'=>['required','numeric','min:0'],'stok_minimum'=>['required','numeric','min:0']]);
-        DB::table('bahan_baku')->insert($data + ['created_at'=>now(),'updated_at'=>now()]);
-        return back()->with('success','Bahan baku berhasil ditambahkan.');
+        $query = DB::table('menu')
+            ->leftJoin('kategori', 'menu.id_kategori', '=', 'kategori.id_kategori')
+            ->select('menu.*', 'kategori.nama_kategori');
+
+        if ($request->filled('kategori')) {
+            $query->where('kategori.nama_kategori', $request->query('kategori'));
+        }
+
+        $stocks = $query->orderBy('menu.nama_menu')->get()->map(fn ($item) => [
+            'id' => $item->id_menu,
+            'nama' => $item->nama_menu,
+            'kategori' => $item->nama_kategori ?? 'Tanpa kategori',
+            'jumlah' => ($item->stok ?? 0) . ' item',
+            'stok' => $item->stok ?? 0,
+            'satuan' => 'item',
+            'minimum' => ($item->batas_minimum ?? 0) . ' item',
+            'stok_minimum' => $item->batas_minimum ?? 0,
+            'status' => ($item->stok ?? 0) <= 0
+                ? 'Habis'
+                : (($item->stok ?? 0) <= ($item->batas_minimum ?? 0) ? 'Menipis' : 'Aman'),
+        ])->all();
+
+        return view('admin.stock', compact('stocks', 'stockCategories'));
     }
 
     public function updateStock(Request $request, int $id)
     {
-        $this->requireStockTable();
-        $data = $request->validate(['stok'=>['required','numeric','min:0'],'stok_minimum'=>['required','numeric','min:0']]);
-        DB::table('bahan_baku')->where('id_bahan',$id)->update($data + ['updated_at'=>now()]);
-        return back()->with('success','Stok berhasil diperbarui.');
-    }
+        $data = $request->validate([
+            'stok' => ['required', 'integer', 'min:0'],
+            'stok_minimum' => ['required', 'integer', 'min:0'],
+        ]);
 
-    private function requireStockTable(): void
-    {
-        abort_unless(Schema::hasTable('bahan_baku'), 503, 'Jalankan php artisan migrate untuk mengaktifkan tabel bahan baku.');
+        $menu = DB::table('menu')->where('id_menu', $id)->first();
+        if (! $menu) {
+            return back()->with('error', 'Menu tidak ditemukan.');
+        }
+
+        DB::table('menu')->where('id_menu', $id)->update([
+            'stok' => $data['stok'],
+            'batas_minimum' => $data['stok_minimum'],
+            'status' => $data['stok'] > 0 ? 'tersedia' : 'habis',
+        ]);
+
+        return back()->with('success', 'Stok menu berhasil diperbarui.');
     }
 
     public function criticalStockPage()
     {
-        $this->requireStockTable();
-        $critical = DB::table('bahan_baku')->whereColumn('stok','<=','stok_minimum')->orderBy('stok')->get()->map(fn ($item) => [
-            'id'=>$item->id_bahan,'nama'=>$item->nama_bahan,'jumlah'=>$item->stok.' '.$item->satuan,
-            'minimum'=>$item->stok_minimum.' '.$item->satuan,'status'=>$item->stok <= 0 ? 'Habis' : 'Menipis','menu'=>'Cek resep menu terkait',
-        ])->all();
+        $critical = DB::table('menu')
+            ->leftJoin('kategori', 'menu.id_kategori', '=', 'kategori.id_kategori')
+            ->select('menu.*', 'kategori.nama_kategori')
+            ->whereColumn('menu.stok', '<=', 'menu.batas_minimum')
+            ->orderBy('menu.stok')
+            ->get()
+            ->map(fn ($item) => [
+                'id' => $item->id_menu,
+                'nama' => $item->nama_menu,
+                'jumlah' => ($item->stok ?? 0) . ' item',
+                'minimum' => ($item->batas_minimum ?? 0) . ' item',
+                'status' => ($item->stok ?? 0) <= 0 ? 'Habis' : 'Menipis',
+                'kategori' => $item->nama_kategori ?? 'Tanpa kategori',
+            ])->all();
+
         return view('admin.critical-stock', compact('critical'));
     }
 
@@ -296,10 +333,18 @@ class AdminController extends Controller
     public function exportPage() { return view('admin.export'); }
 
     public function users() { $columns = array_values(array_diff(Schema::getColumnListing('users'),['password','remember_token'])); return response()->json(DB::table('users')->select($columns)->get()); }
-    public function menu() { return response()->json(DB::table('menu')->join('kategori','menu.id_kategori','=','kategori.id_kategori')->get()); }
+    public function menu()
+    {
+        return response()->json(
+            DB::table('menu')
+                ->leftJoin('kategori', 'menu.id_kategori', '=', 'kategori.id_kategori')
+                ->select('menu.*', 'kategori.nama_kategori')
+                ->get()
+        );
+    }
     public function kategori() { $this->ensureDefaultCategories(); return response()->json(DB::table('kategori')->orderBy('nama_kategori')->get()); }
-    public function stok() { $this->requireStockTable(); return response()->json(DB::table('bahan_baku')->get()); }
-    public function stokMenipis() { $this->requireStockTable(); return response()->json(DB::table('bahan_baku')->whereColumn('stok','<=','stok_minimum')->get()); }
+    public function stok() { return response()->json(DB::table('menu')->select('id_menu', 'nama_menu', 'stok', 'batas_minimum', 'status')->get()); }
+    public function stokMenipis() { return response()->json(DB::table('menu')->select('id_menu', 'nama_menu', 'stok', 'batas_minimum', 'status')->whereColumn('stok', '<=', 'batas_minimum')->get()); }
     public function laporan() { return response()->json(['pendapatan'=>DB::table('pembayaran')->sum('total'),'transaksi'=>DB::table('pembayaran')->distinct('id_pesanan')->count('id_pesanan')]); }
 
     private function ensureDefaultCategories(): void

@@ -21,7 +21,7 @@
 
     // [label, route, ikon]
     $menu = $isAdmin
-        ? [['Dashboard','admin.dashboard','dashboard'],['Kelola Menu','admin.menus','menu'],['Kelola Pengguna','admin.users','users'],['Kelola Stok','admin.stock','stock'],['Laporan','admin.reports','report']]
+        ? [['Dashboard','admin.dashboard','dashboard'],['Menu & Stok','admin.menus','menu'],['Kelola Pengguna','admin.users','users'],['Laporan','admin.reports','report']]
         : [['Dashboard','kasir.dashboard','dashboard'],['Daftar Pesanan','kasir.orders','orders'],['Cari Order','kasir.search','search'],['Verifikasi Bayar','kasir.verify','card'],['Cetak Struk','kasir.receipt','printer']];
 @endphp
 <!DOCTYPE html>
@@ -51,8 +51,13 @@
 
     <nav class="flex flex-1 flex-col gap-1">
         @foreach ($menu as [$label, $route, $icon])
+            @php
+                $isActive = $route === 'admin.menus'
+                    ? request()->routeIs('admin.menus', 'admin.stock', 'admin.stock.critical')
+                    : request()->routeIs($route);
+            @endphp
             <a href="{{ Route::has($route) ? route($route) : '#' }}"
-               title="{{ $label }}" class="flex items-center gap-2 rounded-md px-2.5 py-2 transition {{ request()->routeIs($route) ? 'bg-cream font-semibold text-brand' : 'hover:bg-cream/10' }}">
+               title="{{ $label }}" class="flex items-center gap-2 rounded-md px-2.5 py-2 transition {{ $isActive ? 'bg-cream font-semibold text-brand' : 'hover:bg-cream/10' }}">
                 {!! $svg($icon, 15) !!}<span class="max-md:hidden">{{ $label }}</span>
             </a>
         @endforeach
