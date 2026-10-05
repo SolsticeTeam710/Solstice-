@@ -35,6 +35,10 @@
                     </div>
                 </div>
 
+                <button id="track-last-order" type="button" hidden>
+                    Lacak Pesanan Terakhir
+                </button>
+
                 <label class="search">
                     <span aria-hidden="true">⌕</span>
                     <input id="menu-search" type="search" placeholder="Cari kopi atau makanan..." aria-label="Cari menu">
@@ -171,21 +175,21 @@
                     </div>
 
                     <div class="steps">
-                        <div class="step done">
+                        <div class="step" data-track-step="1">
                             <span class="step-mark">✓</span>
                             <div>
                                 <strong>Pesanan disiapkan</strong>
                                 <p>Ringkasan pesanan siap ditunjukkan kepada kasir.</p>
                             </div>
                         </div>
-                        <div class="step current">
+                        <div class="step" data-track-step="2">
                             <span class="step-mark">2</span>
                             <div>
                                 <strong>Menunggu konfirmasi kasir</strong>
                                 <p>Kasir akan mengonfirmasi pesanan dan pembayaran Anda.</p>
                             </div>
                         </div>
-                        <div class="step">
+                        <div class="step" data-track-step="3">
                             <span class="step-mark">3</span>
                             <div>
                                 <strong>Siap diambil</strong>

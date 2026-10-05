@@ -78,16 +78,125 @@
     const statusText = status => ({pending:'Baru',processing:'Diproses',ready:'Siap',done:'Selesai',other:status||'—'}[normalize(status)]);
     const badge = status => `<span class="badge ${normalize(status)}">${esc(statusText(status))}</span>`;
     const get = (obj,...keys) => { for(const key of keys)if(obj?.[key]!==undefined&&obj?.[key]!==null)return obj[key]; return null; };
-    async function request(url, options={}) { const response=await fetch(url,{headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content,...(options.headers||{})},...options}); const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.message||'Permintaan gagal.'); return data; }
+
+    async function request(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                ...(options.headers || {}),
+            },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Permintaan gagal.');
+        return data;
+    }
+
     function notify(message,type='success'){const node=document.getElementById('feedback');node.textContent=message;node.className=`feedback show ${type}`;window.clearTimeout(notify.timer);notify.timer=window.setTimeout(()=>node.className='feedback',4500)}
     function switchView(name){document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id===`view-${name}`));document.querySelectorAll('.nav button').forEach(el=>el.classList.toggle('active',el.dataset.view===name));document.getElementById('page-title').textContent=titles[name];if(name==='orders')renderOrders()}
     function row(order,index){const id=get(order,'order_id','id_pesanan')||'—';const amount=get(order,'total_harga','total')||0;const status=get(order,'status','status_pesanan')||'pending';return `<tr><td>${index+1}</td><td class="order-id">${esc(id)}</td><td>${date(get(order,'tanggal','created_at'))}</td><td class="amount">${money(amount)}</td><td>${badge(status)}</td><td><button class="btn" data-detail="${esc(id)}">Detail</button></td></tr>`}
     function renderOrders(){const table=document.getElementById('orders-table');const filtered=orders.filter(o=>activeFilter==='all'||normalize(get(o,'status','status_pesanan'))===activeFilter);document.getElementById('orders-empty').hidden=filtered.length>0;table.innerHTML=filtered.length?filtered.map(row).join(''):`<tr><td colspan="6" class="empty">Tidak ada pesanan pada status ini.</td></tr>`;}
     async function loadData(){try{const [stats,data]=await Promise.all([request(`${api}/dashboard`),request(`${api}/orders`)]);orders=Array.isArray(data)?data:(data.data||[]);const total=get(stats,'jumlah_pesanan')??orders.length;const pending=orders.filter(o=>normalize(get(o,'status','status_pesanan'))==='pending').length;const processing=orders.filter(o=>normalize(get(o,'status','status_pesanan'))==='processing').length;const ready=orders.filter(o=>normalize(get(o,'status','status_pesanan'))==='ready').length;const completed=orders.filter(o=>normalize(get(o,'status','status_pesanan'))==='done');const done=completed.length;const income=completed.reduce((sum,o)=>sum+Number(get(o,'total_harga','total')||0),0);document.getElementById('stat-total').textContent=`${total} Order`;document.getElementById('stat-active').textContent=`${pending+processing+ready} Pesanan`;document.getElementById('stat-done').textContent=`${done} Order`;document.getElementById('stat-income').textContent=money(income);const recent=[...orders].sort((a,b)=>new Date(get(b,'tanggal')||0)-new Date(get(a,'tanggal')||0)).slice(0,5);document.getElementById('recent-orders').innerHTML=recent.length?recent.map(row).join(''):`<tr><td colspan="6" class="empty">Belum ada pesanan.</td></tr>`;renderOrders();}catch(error){document.getElementById('recent-orders').innerHTML=`<tr><td colspan="6" class="empty">${esc(error.message)}. Coba segarkan halaman.</td></tr>`;document.getElementById('orders-table').innerHTML=`<tr><td colspan="6" class="empty">Data pesanan belum dapat dimuat.</td></tr>`;}}
-    function orderDetail(order){selectedOrder=order;const id=get(order,'order_id','id_pesanan')||'—';const status=get(order,'status','status_pesanan')||'pending';return `<section class="detail-layout"><article class="card"><div class="card-head"><div><h2>Rincian Pesanan #${esc(id)}</h2><p class="card-subtitle">${badge(status)}</p></div></div><dl class="detail-list"><dt>Order ID</dt><dd>${esc(id)}</dd><dt>Waktu pesan</dt><dd>${date(get(order,'tanggal','created_at'))}</dd><dt>Pelanggan</dt><dd>${esc(get(order,'nama_pelanggan','nama','customer_name')||'Informasi pelanggan tidak tersedia')}</dd><dt>Meja</dt><dd>${esc(get(order,'nomor_meja','meja')||'—')}</dd><dt>Catatan</dt><dd>${esc(get(order,'catatan')||'—')}</dd></dl><div class="divider"></div><div class="detail-total"><span>Total tagihan</span><span>${money(get(order,'total_harga','total'))}</span></div></article><article class="card"><h2>Tindakan Verifikasi</h2><p class="helper">Pastikan pembayaran tunai atau non-tunai sudah diterima sebelum menyetujui. Tindakan ini akan mengubah status pesanan menjadi diproses.</p><div class="divider"></div><button class="btn primary" data-verify="${esc(id)}" ${normalize(status)!=='pending'?'disabled':''}>Setujui & Konfirmasi Bayar</button></article></section>`}
+
+    function orderDetail(order) {
+        selectedOrder = order;
+
+        const id = get(order, 'order_id', 'id_pesanan') || '—';
+        const status = get(order, 'status', 'status_pesanan') || 'pending';
+        const stage = normalize(status);
+
+        let action = '';
+
+        if (stage === 'pending') {
+            action = '<article class="card"><h2>Verifikasi Bayar</h2><p class="helper">Pastikan pembayaran sudah diterima sebelum menyetujui.</p><div class="divider"></div><button class="btn primary" data-verify="' + esc(id) + '">Setujui & Konfirmasi Bayar</button></article>';
+        } else if (stage === 'processing') {
+            action = '<article class="card"><h2>Pesanan sedang diproses</h2><p class="helper">Tandai siap setelah pesanan selesai dibuat.</p><div class="divider"></div><button class="btn primary" data-next-status="' + esc(id) + '" data-target-status="siap">Tandai Siap</button></article>';
+        } else if (stage === 'ready') {
+            action = '<article class="card"><h2>Pesanan siap diambil</h2><p class="helper">Tandai selesai setelah pesanan diserahkan kepada pelanggan.</p><div class="divider"></div><button class="btn primary" data-next-status="' + esc(id) + '" data-target-status="selesai">Selesaikan Pesanan</button></article>';
+        } else {
+            action = '<article class="card"><h2>Pesanan selesai</h2></article>';
+        }
+
+        return '<section class="detail-layout">' +
+            '<article class="card"><div class="card-head"><div><h2>Rincian Pesanan #' + esc(id) + '</h2><p class="card-subtitle">' + badge(status) + '</p></div></div>' +
+            '<dl class="detail-list"><dt>Order ID</dt><dd>' + esc(id) + '</dd>' +
+            '<dt>Waktu pesan</dt><dd>' + date(get(order, 'tanggal', 'created_at')) + '</dd>' +
+            '<dt>Pelanggan</dt><dd>' + esc(get(order, 'nama_pelanggan', 'nama', 'customer_name') || 'Informasi pelanggan tidak tersedia') + '</dd>' +
+            '<dt>Meja</dt><dd>' + esc(get(order, 'nomor_meja', 'meja') || '—') + '</dd>' +
+            '<dt>Catatan</dt><dd>' + esc(get(order, 'catatan') || '—') + '</dd></dl>' +
+            '<div class="divider"></div><div class="detail-total"><span>Total tagihan</span><span>' +
+            money(get(order, 'total_harga', 'total')) + '</span></div></article>' + action + '</section>';
+    }
+
     async function findOrder(id){if(!id.trim())throw new Error('Masukkan Order ID terlebih dahulu.');return request(`${api}/orders/${encodeURIComponent(id.trim())}`)}
     function receipt(order){const id=get(order,'order_id','id_pesanan')||'—';return `<h2>Solstice Coffe</h2><p>Struk Pembelian</p><hr><div class="receipt-row"><span>Order ID</span><strong>${esc(id)}</strong></div><div class="receipt-row"><span>Tanggal</span><span>${date(get(order,'tanggal','created_at'))}</span></div><div class="receipt-row"><span>Status</span><span>${esc(statusText(get(order,'status','status_pesanan')))}</span></div><hr><div class="receipt-row receipt-total"><span>Total</span><span>${money(get(order,'total_harga','total'))}</span></div><hr><p>Terima kasih telah berkunjung ☕</p><p>Solstice Coffe</p>`}
-    document.addEventListener('click',async event=>{const nav=event.target.closest('[data-view]');if(nav)switchView(nav.dataset.view);const go=event.target.closest('[data-go]');if(go)switchView(go.dataset.go);if(event.target.closest('[data-refresh]'))loadData();const filter=event.target.closest('[data-status]');if(filter){activeFilter=filter.dataset.status;document.querySelectorAll('.filter-chip').forEach(el=>el.classList.toggle('active',el===filter));renderOrders()}const detail=event.target.closest('[data-detail]');if(detail){try{const order=await findOrder(detail.dataset.detail);switchView('verify');document.getElementById('verify-result').innerHTML=orderDetail(order)}catch(error){notify(error.message,'error')}}const verify=event.target.closest('[data-verify]');if(verify){try{await request(`${api}/orders/${encodeURIComponent(verify.dataset.verify)}/verify`,{method:'PUT'});notify('Pembayaran berhasil diverifikasi.');const order=await findOrder(verify.dataset.verify);document.getElementById('verify-result').innerHTML=orderDetail(order);loadData()}catch(error){notify(error.message,'error')}}if(event.target.closest('#print-receipt'))window.print()});
+
+    document.addEventListener('click', async event => {
+        const nav = event.target.closest('[data-view]');
+        if (nav) switchView(nav.dataset.view);
+
+        const go = event.target.closest('[data-go]');
+        if (go) switchView(go.dataset.go);
+
+        if (event.target.closest('[data-refresh]')) loadData();
+
+        const filter = event.target.closest('[data-status]');
+        if (filter) {
+            activeFilter = filter.dataset.status;
+            document.querySelectorAll('.filter-chip').forEach(el => el.classList.toggle('active', el === filter));
+            renderOrders();
+        }
+
+        const detail = event.target.closest('[data-detail]');
+        if (detail) {
+            try {
+                const order = await findOrder(detail.dataset.detail);
+                const isPending = normalize(get(order, 'status', 'status_pesanan')) === 'pending';
+                switchView(isPending ? 'verify' : 'search');
+                document.getElementById(isPending ? 'verify-result' : 'search-result').innerHTML = orderDetail(order);
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        const verify = event.target.closest('[data-verify]');
+        if (verify) {
+            try {
+                await request(api + '/orders/' + encodeURIComponent(verify.dataset.verify) + '/verify', { method: 'PUT' });
+                notify('Pembayaran berhasil diverifikasi.');
+                const order = await findOrder(verify.dataset.verify);
+                document.getElementById('verify-result').innerHTML = orderDetail(order);
+                loadData();
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        const advance = event.target.closest('[data-next-status]');
+        if (advance) {
+            const box = advance.closest('#verify-result, #search-result');
+
+            try {
+                await request(api + '/orders/' + encodeURIComponent(advance.dataset.nextStatus) + '/status', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: advance.dataset.targetStatus }),
+                });
+
+                const updatedOrder = await findOrder(advance.dataset.nextStatus);
+                if (box) box.innerHTML = orderDetail(updatedOrder);
+
+                notify('Status pesanan diperbarui.');
+                loadData();
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        if (event.target.closest('#print-receipt')) window.print();
+    });
+
     document.getElementById('search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('search-result');box.innerHTML='<div class="loading">Mencari pesanan…</div>';try{const order=await findOrder(document.getElementById('search-input').value);box.innerHTML=orderDetail(order)}catch(error){box.innerHTML=`<div class="empty">${esc(error.message)}</div>`}});
     document.getElementById('verify-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('verify-result');box.innerHTML='<div class="loading">Mencari pesanan…</div>';try{box.innerHTML=orderDetail(await findOrder(document.getElementById('verify-input').value))}catch(error){box.innerHTML=`<div class="card empty">${esc(error.message)}</div>`}});
     document.getElementById('receipt-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('receipt-result');box.innerHTML='<div class="loading">Memuat struk…</div>';try{const order=await findOrder(document.getElementById('receipt-input').value);selectedOrder=order;box.innerHTML=receipt(order)}catch(error){box.innerHTML=`<p class="helper">${esc(error.message)}</p>`}});

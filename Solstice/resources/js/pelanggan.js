@@ -1,6 +1,8 @@
 (() => {
   const productsEl = document.getElementById("products"), cart = /* @__PURE__ */ new Map();
   let products = [], category = "all", query = "", payment = "CASH", serial = 0;
+  let lastOrderId = sessionStorage.getItem("solsticeLastOrderId");
+  const trackLastOrderButton = document.getElementById("track-last-order");function syncTrackLastOrderButton() {if (trackLastOrderButton) {trackLastOrderButton.hidden = !lastOrderId;}}syncTrackLastOrderButton();
   const format = (value) => "Rp " + new Intl.NumberFormat("id-ID").format(Number(value || 0));
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const itemId = (item) => String(item.id_menu ?? item.id ?? item.nama_menu);
@@ -70,6 +72,7 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
     if (name === "cart") renderCart();
     if (name === "checkout") renderCart();
+    if (name === "tracking") refreshTrackingStatus();
   }
   async function loadMenu() {
     try {
@@ -108,6 +111,12 @@
     }
     const page = event.target.closest("[data-page]");
     if (page) showPage(page.dataset.page);
+    const trackLastOrder = event.target.closest("#track-last-order");
+
+if (trackLastOrder && lastOrderId) {
+    document.getElementById("track-order").textContent = "#" + lastOrderId;
+    showPage("tracking");
+}
     const option = event.target.closest("[data-payment]");
     if (option) {
       payment = option.dataset.payment;
@@ -121,26 +130,83 @@
   document.getElementById("go-checkout").addEventListener("click", () => {
     if (quantity()) showPage("checkout");
   });
-  document.getElementById("confirm-order").addEventListener("click", () => {
-    if (!quantity()) {
-      showPage("menu");
-      return;
+  document.getElementById("confirm-order").addEventListener("click", async (event) => {
+  if (!quantity()) {
+    showPage("menu");
+    return;
+  }
+
+  const name = document.getElementById("customer-name").value.trim();
+
+  if (!name) {
+    document.getElementById("customer-name").focus();
+    toast("Masukkan nama pelanggan terlebih dahulu.");
+    return;
+  }
+
+  const items = [...cart.values()].map(({ item, quantity }) => ({
+    id_menu: Number(item.id_menu),
+    jumlah_pesanan: quantity,
+  }));
+
+  if (items.some((item) => !Number.isInteger(item.id_menu))) {
+    toast("ID menu tidak valid. Coba refresh halaman.");
+    return;
+  }
+
+  const button = event.currentTarget;
+  button.disabled = true;
+
+  try {
+    const response = await fetch("/api/pesanan", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+      },
+      body: JSON.stringify({
+        nama_pelanggan: name,
+        metode_pembayaran: payment,
+        catatan: document.getElementById("order-note").value.trim(),
+        items,
+      }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const validationError = Object.values(result.errors || {}).flat()[0];
+      throw new Error(validationError || result.message || "Pesanan gagal disimpan.");
     }
-    const name = document.getElementById("customer-name").value.trim();
-    if (!name) {
-      document.getElementById("customer-name").focus();
-      toast("Masukkan nama pelanggan terlebih dahulu.");
-      return;
-    }
-    serial += 1;
-    const order = `SC-${String(Date.now()).slice(-6)}`;
+
+    const savedOrder = result.order;
+    lastOrderId = savedOrder.order_id;
+    sessionStorage.setItem("solsticeLastOrderId", lastOrderId);
+    syncTrackLastOrderButton();
+
     document.getElementById("success-name").textContent = name;
-    document.getElementById("success-order").textContent = "#" + order;
-    document.getElementById("track-order").textContent = "#" + order;
-    document.getElementById("success-total").textContent = format(total());
+    document.getElementById("success-order").textContent = "#" + savedOrder.order_id;
+    document.getElementById("track-order").textContent = "#" + savedOrder.order_id;
+    document.getElementById("success-total").textContent = format(savedOrder.total_harga);
+
+    cart.clear();
+    renderCart();
     showPage("success");
-  });
+  } catch (error) {
+    toast(error.message || "Pesanan gagal dikirim. Coba lagi.");
+  } finally {
+    button.disabled = false;
+  }
+});
   document.querySelectorAll("[data-category]").forEach((button) => button.setAttribute("aria-pressed", button.classList.contains("active")));
   renderCart();
   loadMenu();
+  setInterval(() => {
+  const trackingPage = document.getElementById("page-tracking");
+
+  if (trackingPage?.classList.contains("active")) {
+    refreshTrackingStatus();
+  }
+}, 5000);
 })();
