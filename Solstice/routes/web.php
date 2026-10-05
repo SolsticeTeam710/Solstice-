@@ -38,10 +38,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 });
 
 Route::middleware(['auth', 'role:kasir'])->group(function () {
-    Route::get('/kasir/dashboard', fn () => 'Dashboard Kasir SOLSTICE COFFE')->name('kasir.dashboard');
+    Route::get('/kasir/dashboard', fn () => view('kasir.dashboard'))->name('kasir.dashboard');
 });
 
 Route::get('/menu', [MenuController::class, 'index'])->name('pelanggan.menu');
+Route::get('/pesan', fn () => view('pelanggan.menu'))->name('pelanggan.pesan');
 Route::post('/api/pesanan', [PesananController::class, 'store']);
 
 // Endpoints API yang sudah tersedia.
