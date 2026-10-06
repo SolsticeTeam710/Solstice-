@@ -73,7 +73,19 @@
     let orders = [], activeFilter = 'all', selectedOrder = null;
     const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     const money = value => 'Rp ' + new Intl.NumberFormat('id-ID').format(Number(value || 0));
-    const date = value => { if (!value) return '—'; const parsed = new Date(String(value).replace(' ','T')); return Number.isNaN(parsed.getTime()) ? esc(value) : new Intl.DateTimeFormat('id-ID',{dateStyle:'medium',timeStyle:'short'}).format(parsed); };
+    const date = value => {
+        if (!value) return '—';
+        const raw = String(value).trim().replace(' ', 'T');
+        const iso = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw) ? raw : `${raw}Z`;
+        const parsed = new Date(iso);
+        return Number.isNaN(parsed.getTime())
+            ? esc(value)
+            : new Intl.DateTimeFormat('id-ID', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                timeZone: 'Asia/Jakarta',
+            }).format(parsed);
+    };
     const normalize = status => { const s=String(status||'').toLowerCase(); if(['pending','baru','menunggu pembayaran','menunggu'].includes(s))return 'pending'; if(['diproses','processing','sedang diproses'].includes(s))return 'processing'; if(['siap','ready','siap diambil','siap disajikan'].includes(s))return 'ready'; if(['selesai','done','completed','lunas'].includes(s))return 'done'; return 'other'; };
     const statusText = status => ({pending:'Baru',processing:'Diproses',ready:'Siap',done:'Selesai',other:status||'—'}[normalize(status)]);
     const badge = status => `<span class="badge ${normalize(status)}">${esc(statusText(status))}</span>`;

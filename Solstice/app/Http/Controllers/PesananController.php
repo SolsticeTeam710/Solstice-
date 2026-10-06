@@ -18,10 +18,22 @@ public function store(Request $request)
         'items' => ['required', 'array', 'min:1'],
         'items.*.id_menu' => ['required', 'integer', 'distinct'],
         'items.*.jumlah_pesanan' => ['required', 'integer', 'min:1', 'max:99'],
+        'nomor_meja' => ['required', 'integer', 'between:1,4', 'exists:meja,nomor_meja'],
     ]);
 
     $order = DB::transaction(function () use ($data) {
         $items = collect($data['items']);
+
+        $meja = DB::table('meja')
+    ->where('nomor_meja', $data['nomor_meja'])
+    ->lockForUpdate()
+    ->first();
+if (!$meja || $meja->status !== 'kosong' || $meja->id_pesanan !== null) {
+    throw ValidationException::withMessages([
+        'nomor_meja' => 'Meja ini sedang digunakan atau tidak tersedia.',
+    ]);
+}
+
         $menuIds = $items->pluck('id_menu')->unique()->values();
 
         $menus = DB::table('menu')
@@ -83,6 +95,13 @@ public function store(Request $request)
                 ...$detail,
             ]);
         }
+
+DB::table('meja')
+    ->where('id_meja', $meja->id_meja)
+    ->update([
+        'id_pesanan' => $pesananId,
+        'status' => 'terisi',
+    ]);
 
         return [
             'order_id' => $orderId,

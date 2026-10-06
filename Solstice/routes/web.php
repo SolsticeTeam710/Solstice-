@@ -5,10 +5,18 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\MenuController;
-use App\Http\Controllers\PesananController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('login'));
+Route::get('/', function () {
+    if (! Auth::check()) {
+        return redirect()->route('login');
+    }
+
+    return Auth::user()->role === 'admin'
+        ? redirect()->route('admin.dashboard')
+        : redirect()->route('kasir.dashboard');
+});
 Route::get('/health', [HealthController::class, 'check']);
 
 Route::middleware('guest')->group(function () {
@@ -61,8 +69,6 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
 
 Route::get('/menu', [MenuController::class, 'index'])->name('pelanggan.menu');
 Route::get('/pesan', fn () => view('pelanggan.menu'))->name('pelanggan.pesan');
-Route::post('/api/pesanan', [PesananController::class, 'store']);
-Route::get('/api/pesanan/{orderId}', [PesananController::class, 'show']);
 
 Route::middleware(['auth', 'role:kasir,admin'])
     ->prefix('api/kasir')

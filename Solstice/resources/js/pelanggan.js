@@ -1,8 +1,17 @@
 (() => {
   const productsEl = document.getElementById("products"), cart = /* @__PURE__ */ new Map();
-  let products = [], category = "all", query = "", payment = "CASH", serial = 0;
+  let products = [], category = "all", query = "", payment = "CASH";
   let lastOrderId = sessionStorage.getItem("solsticeLastOrderId");
-  const trackLastOrderButton = document.getElementById("track-last-order");function syncTrackLastOrderButton() {if (trackLastOrderButton) {trackLastOrderButton.hidden = !lastOrderId;}}syncTrackLastOrderButton();
+  let trackingRequestInFlight = false;
+  const trackLastOrderButton = document.getElementById("track-last-order");
+
+  function syncTrackLastOrderButton() {
+    if (trackLastOrderButton) {
+      trackLastOrderButton.hidden = !lastOrderId;
+    }
+  }
+
+  syncTrackLastOrderButton();
   const format = (value) => "Rp " + new Intl.NumberFormat("id-ID").format(Number(value || 0));
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const itemId = (item) => String(item.id_menu ?? item.id ?? item.nama_menu);
@@ -62,7 +71,98 @@
   function totalsMarkup() {
     return `<div class="total-row"><span>Subtotal</span><strong>${format(subtotal())}</strong></div><div class="total-row"><span>PB1 (Pajak 10%)</span><strong>${format(tax())}</strong></div><div class="total-row grand"><span>Total pembayaran</span><strong>${format(total())}</strong></div>`;
   }
+
+  async function refreshTrackingStatus() {
+    const message = document.getElementById("tracking-message");
+
+    if (!lastOrderId) {
+      if (message) message.textContent = "Belum ada pesanan yang bisa dilacak.";
+      return;
+    }
+
+    if (trackingRequestInFlight) return;
+    trackingRequestInFlight = true;
+
+    try {
+      const response = await fetch(`/api/pesanan/${encodeURIComponent(lastOrderId)}`, {
+        headers: { Accept: "application/json" },
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.message || `Gagal memuat status (${response.status}).`);
+      }
+
+      const states = {
+        pending: {
+          currentStep: 2,
+          message: "Pesanan diterima. Menunggu konfirmasi kasir.",
+          step2Title: "Menunggu konfirmasi kasir",
+          step2Description: "Kasir akan mengonfirmasi pesanan dan pembayaran Anda.",
+          step3Title: "Siap diambil",
+          step3Description: "Pesanan akan ditandai siap setelah selesai dibuat.",
+        },
+        diproses: {
+          currentStep: 3,
+          message: "Pembayaran dikonfirmasi. Pesanan sedang disiapkan.",
+          step2Title: "Pesanan dikonfirmasi kasir",
+          step2Description: "Pembayaran Anda sudah diverifikasi.",
+          step3Title: "Pesanan sedang disiapkan",
+          step3Description: "Kasir sedang menyiapkan pesanan Anda.",
+        },
+        siap: {
+          currentStep: 3,
+          message: "Pesanan siap diambil.",
+          step2Title: "Pesanan dikonfirmasi kasir",
+          step2Description: "Pembayaran Anda sudah diverifikasi.",
+          step3Title: "Siap diambil",
+          step3Description: "Silakan ambil pesanan di meja kasir.",
+        },
+        selesai: {
+          currentStep: 3,
+          finished: true,
+          message: "Pesanan selesai dan sudah diserahkan. Terima kasih!",
+          step2Title: "Pesanan dikonfirmasi kasir",
+          step2Description: "Pembayaran Anda sudah diverifikasi.",
+          step3Title: "Pesanan selesai",
+          step3Description: "Pesanan Anda sudah diserahkan.",
+        },
+      };
+      const state = states[result.status];
+
+      if (!state) throw new Error(`Status pesanan tidak dikenal: ${result.status || "kosong"}.`);
+
+      if (message) message.textContent = state.message;
+
+      const step2 = document.querySelector('[data-track-step="2"]');
+      const step3 = document.querySelector('[data-track-step="3"]');
+      if (step2) {
+        step2.querySelector("strong").textContent = state.step2Title;
+        step2.querySelector("p").textContent = state.step2Description;
+      }
+      if (step3) {
+        step3.querySelector("strong").textContent = state.step3Title;
+        step3.querySelector("p").textContent = state.step3Description;
+      }
+
+      document.querySelectorAll("[data-track-step]").forEach((step) => {
+        const number = Number(step.dataset.trackStep);
+        const done = state.finished || number < state.currentStep;
+        step.classList.toggle("done", done);
+        step.classList.toggle("current", !state.finished && number === state.currentStep);
+
+        const mark = step.querySelector(".step-mark");
+        if (mark) mark.textContent = done ? "✓" : String(number);
+      });
+    } catch (error) {
+      if (message) message.textContent = error.message || "Status pesanan gagal dimuat. Coba lagi.";
+    } finally {
+      trackingRequestInFlight = false;
+    }
+  }
+
   function showPage(name) {
+    if (!document.getElementById(`page-${name}`)) return;
     if (name === "cart" && !quantity()) {
       toast("Keranjang masih kosong. Pilih menu dahulu.");
       return;
@@ -72,7 +172,7 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
     if (name === "cart") renderCart();
     if (name === "checkout") renderCart();
-    if (name === "tracking") refreshTrackingStatus();
+    if (name === "tracking") void refreshTrackingStatus();
   }
   async function loadMenu() {
     try {
@@ -112,11 +212,10 @@
     const page = event.target.closest("[data-page]");
     if (page) showPage(page.dataset.page);
     const trackLastOrder = event.target.closest("#track-last-order");
-
-if (trackLastOrder && lastOrderId) {
-    document.getElementById("track-order").textContent = "#" + lastOrderId;
-    showPage("tracking");
-}
+    if (trackLastOrder && lastOrderId) {
+      document.getElementById("track-order").textContent = `#${lastOrderId}`;
+      showPage("tracking");
+    }
     const option = event.target.closest("[data-payment]");
     if (option) {
       payment = option.dataset.payment;
@@ -131,82 +230,77 @@ if (trackLastOrder && lastOrderId) {
     if (quantity()) showPage("checkout");
   });
   document.getElementById("confirm-order").addEventListener("click", async (event) => {
-  if (!quantity()) {
-    showPage("menu");
-    return;
-  }
-
-  const name = document.getElementById("customer-name").value.trim();
-
-  if (!name) {
-    document.getElementById("customer-name").focus();
-    toast("Masukkan nama pelanggan terlebih dahulu.");
-    return;
-  }
-
-  const items = [...cart.values()].map(({ item, quantity }) => ({
-    id_menu: Number(item.id_menu),
-    jumlah_pesanan: quantity,
-  }));
-
-  if (items.some((item) => !Number.isInteger(item.id_menu))) {
-    toast("ID menu tidak valid. Coba refresh halaman.");
-    return;
-  }
-
-  const button = event.currentTarget;
-  button.disabled = true;
-
-  try {
-    const response = await fetch("/api/pesanan", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-      },
-      body: JSON.stringify({
-        nama_pelanggan: name,
-        metode_pembayaran: payment,
-        catatan: document.getElementById("order-note").value.trim(),
-        items,
-      }),
-    });
-
-    const result = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      const validationError = Object.values(result.errors || {}).flat()[0];
-      throw new Error(validationError || result.message || "Pesanan gagal disimpan.");
+    if (!quantity()) {
+      showPage("menu");
+      return;
     }
 
-    const savedOrder = result.order;
-    lastOrderId = savedOrder.order_id;
-    sessionStorage.setItem("solsticeLastOrderId", lastOrderId);
-    syncTrackLastOrderButton();
+    const name = document.getElementById("customer-name").value.trim();
+    if (!name) {
+      document.getElementById("customer-name").focus();
+      toast("Masukkan nama pelanggan terlebih dahulu.");
+      return;
+    }
 
-    document.getElementById("success-name").textContent = name;
-    document.getElementById("success-order").textContent = "#" + savedOrder.order_id;
-    document.getElementById("track-order").textContent = "#" + savedOrder.order_id;
-    document.getElementById("success-total").textContent = format(savedOrder.total_harga);
+    const items = [...cart.values()].map(({ item, quantity }) => ({
+      id_menu: Number(item.id_menu),
+      jumlah_pesanan: quantity,
+    }));
 
-    cart.clear();
-    renderCart();
-    showPage("success");
-  } catch (error) {
-    toast(error.message || "Pesanan gagal dikirim. Coba lagi.");
-  } finally {
-    button.disabled = false;
-  }
-});
+    if (items.some((item) => !Number.isInteger(item.id_menu))) {
+      toast("ID menu tidak valid. Coba refresh halaman.");
+      return;
+    }
+
+    const button = event.currentTarget;
+    button.disabled = true;
+
+    try {
+      const response = await fetch("/api/pesanan", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+        },
+        body: JSON.stringify({
+          nama_pelanggan: name,
+          metode_pembayaran: payment,
+          catatan: document.getElementById("order-note").value.trim(),
+          items,
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const validationError = Object.values(result.errors || {}).flat()[0];
+        throw new Error(validationError || result.message || "Pesanan gagal disimpan.");
+      }
+      if (!result.order?.order_id) throw new Error("Server tidak mengirim ID pesanan.");
+
+      lastOrderId = result.order.order_id;
+      sessionStorage.setItem("solsticeLastOrderId", lastOrderId);
+      syncTrackLastOrderButton();
+
+      document.getElementById("success-name").textContent = name;
+      document.getElementById("success-order").textContent = `#${lastOrderId}`;
+      document.getElementById("track-order").textContent = `#${lastOrderId}`;
+      document.getElementById("success-total").textContent = format(result.order.total_harga);
+
+      cart.clear();
+      renderCart();
+      showPage("success");
+    } catch (error) {
+      toast(error.message || "Pesanan gagal dikirim. Coba lagi.");
+    } finally {
+      button.disabled = false;
+    }
+  });
   document.querySelectorAll("[data-category]").forEach((button) => button.setAttribute("aria-pressed", button.classList.contains("active")));
   renderCart();
   loadMenu();
   setInterval(() => {
-  const trackingPage = document.getElementById("page-tracking");
-
-  if (trackingPage?.classList.contains("active")) {
-    refreshTrackingStatus();
-  }
-}, 5000);
+    const trackingPage = document.getElementById("page-tracking");
+    if (trackingPage?.classList.contains("active")) void refreshTrackingStatus();
+  }, 5000);
 })();

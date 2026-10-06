@@ -145,7 +145,7 @@
                     </div>
 
                     <div class="notice text-left">
-                        Pratinjau frontend: pesanan ini belum dikirim atau disimpan di server. Silakan tunjukkan ringkasan ini kepada kasir.
+                        Pesanan berhasil disimpan. Tunjukkan Order ID ini kepada kasir untuk konfirmasi pembayaran.
                     </div>
                     <p class="page-desc">Estimasi penyajian 10–15 menit setelah pesanan dikonfirmasi oleh kasir.</p>
                     <button class="primary success-action" data-page="tracking">Lihat Status Pesanan</button>
@@ -198,8 +198,8 @@
                         </div>
                     </div>
 
-                    <div class="notice">
-                        Status ini adalah pratinjau tampilan. Pembaruan status real-time memerlukan API pesanan pelanggan.
+                    <div class="notice" id="tracking-message" role="status" aria-live="polite">
+                        Memuat status pesanan...
                     </div>
                     <div class="center">
                         <button class="secondary" data-page="menu">Kembali ke Menu</button>

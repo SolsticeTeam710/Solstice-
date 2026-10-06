@@ -30,29 +30,31 @@ class KasirController extends Controller
 
     // Daftar pesanan
     public function orders()
-    {
-        $pesanan = DB::table('pesanan')
-            ->orderBy('tanggal', 'desc')
-            ->get();
-
-        return response()->json($pesanan);
-    }
+{
+    return response()->json(
+        DB::table('pesanan')
+            ->leftJoin('meja', 'meja.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->select('pesanan.*', 'meja.nomor_meja')
+            ->orderBy('pesanan.tanggal', 'desc')
+            ->get()
+    );
+}
 
     // Cari pesanan berdasarkan Order ID
     public function search(string $orderId)
-    {
-        $pesanan = DB::table('pesanan')
-            ->where('order_id', $orderId)
-            ->first();
+{
+    $pesanan = DB::table('pesanan')
+        ->leftJoin('meja', 'meja.id_pesanan', '=', 'pesanan.id_pesanan')
+        ->select('pesanan.*', 'meja.nomor_meja')
+        ->where('pesanan.order_id', $orderId)
+        ->first();
 
-        if (!$pesanan) {
-            return response()->json([
-                'message' => 'Pesanan tidak ditemukan'
-            ], 404);
-        }
-
-        return response()->json($pesanan);
+    if (!$pesanan) {
+        return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
     }
+
+    return response()->json($pesanan);
+}
 
     // Verifikasi pembayaran
 public function verify(string $orderId)
@@ -120,23 +122,38 @@ public function updateStatus(Request $request, string $orderId)
         'status' => ['required', 'in:siap,selesai'],
     ]);
 
-    $order = DB::table('pesanan')->where('order_id', $orderId)->first();
-    abort_if(!$order, 404, 'Pesanan tidak ditemukan.');
+    DB::transaction(function () use ($orderId, $data) {
+        $order = DB::table('pesanan')
+            ->where('order_id', $orderId)
+            ->lockForUpdate()
+            ->first();
 
-    $nextStatus = [
-        'diproses' => 'siap',
-        'siap' => 'selesai',
-    ];
+        abort_if(!$order, 404, 'Pesanan tidak ditemukan.');
 
-    abort_unless(
-        ($nextStatus[$order->status] ?? null) === $data['status'],
-        409,
-        'Perubahan status pesanan tidak valid.'
-    );
+        $nextStatus = [
+            'diproses' => 'siap',
+            'siap' => 'selesai',
+        ];
 
-    DB::table('pesanan')
-        ->where('order_id', $orderId)
-        ->update(['status' => $data['status']]);
+        abort_unless(
+            ($nextStatus[$order->status] ?? null) === $data['status'],
+            409,
+            'Perubahan status pesanan tidak valid.'
+        );
+
+        DB::table('pesanan')
+            ->where('id_pesanan', $order->id_pesanan)
+            ->update(['status' => $data['status']]);
+
+        if ($data['status'] === 'selesai') {
+            DB::table('meja')
+                ->where('id_pesanan', $order->id_pesanan)
+                ->update([
+                    'id_pesanan' => null,
+                    'status' => 'kosong',
+                ]);
+        }
+    });
 
     return response()->json(['message' => 'Status pesanan diperbarui.']);
 }
