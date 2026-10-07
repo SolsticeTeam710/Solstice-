@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login — Solstice Coffe</title>
+    <title>Login — Solstice Coffee</title>
     <style>
         :root{
             --primary:#6F4E37; --primary-dark:#4B2E1F; --cream:#F5E6CC;
@@ -45,10 +45,9 @@
         }
         input:focus{border-color:var(--primary); box-shadow:0 0 0 3px rgba(111,78,55,.12)}
         input.invalid{border-color:var(--danger)}
-        .toggle{
-            position:absolute; right:10px; top:50%; transform:translateY(-50%);
-            margin-top:3px; background:none; border:0; cursor:pointer; font-size:18px; color:var(--muted);
-        }
+        .toggle{position:absolute;right:8px;top:50%;transform:translateY(-35%);width:38px;height:38px;display:grid;place-items:center;margin:0;border:0;border-radius:9px;background:transparent;color:var(--muted);cursor:pointer}
+        .toggle:hover{background:#f6f1eb;color:var(--primary)}
+        .toggle svg{width:19px;height:19px}
         .error{color:var(--danger); font-size:13px; margin-top:6px}
         .alert{
             margin-top:16px; padding:12px 14px; border-radius:10px; font-size:14px;
@@ -67,12 +66,12 @@
         <div class="brand">
     <div class="logo">
         @if (file_exists(public_path('images/solstice-logo.jpeg')))
-            <img src="{{ asset('images/solstice-logo.jpeg') }}" alt="Logo Solstice Coffe">
+            <img src="{{ asset('images/solstice-logo.jpeg') }}" alt="Logo Solstice Coffee">
         @else
             ☕
         @endif
     </div>
-    <h1>Solstice Coffe</h1>
+    <h1>Solstice Coffee</h1>
     <p id="roleLabel">Kasir</p>
 </div>
 
@@ -102,7 +101,7 @@
                 <input type="password" id="password" name="password" placeholder="........"
                        autocomplete="current-password" required
                        class="{{ $errors->has('password') ? 'invalid' : '' }}">
-                <button type="button" class="toggle" id="togglePw" aria-label="Tampilkan password">👁</button>
+                <button type="button" class="toggle" id="togglePw" aria-label="Tampilkan password" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.2-6 9.5-6 9.5 6 9.5 6-3.2 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
             </div>
             @error('password') <div class="error">{{ $message }}</div> @enderror
 
@@ -130,7 +129,14 @@
 
         document.getElementById('togglePw').addEventListener('click', () => {
             const pw = document.getElementById('password');
-            pw.type = pw.type === 'password' ? 'text' : 'password';
+            const visible = pw.type === 'password';
+            pw.type = visible ? 'text' : 'password';
+            const toggle = document.getElementById('togglePw');
+            toggle.setAttribute('aria-pressed', String(visible));
+            toggle.setAttribute('aria-label', visible ? 'Sembunyikan password' : 'Tampilkan password');
+            toggle.innerHTML = visible
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 18 18M10.6 6.1A10.8 10.8 0 0 1 12 6c6.3 0 9.5 6 9.5 6a15.6 15.6 0 0 1-3 3.6M6.2 6.3C3.8 8 2.5 12 2.5 12s3.2 6 9.5 6c1.2 0 2.3-.2 3.2-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.2-6 9.5-6 9.5 6 9.5 6-3.2 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>';
         });
     </script>
 </body>

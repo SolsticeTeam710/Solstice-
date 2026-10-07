@@ -29,23 +29,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title') - Solstice Coffe</title>
+    <title>@yield('title') — Solstice Coffee</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css'])
 </head>
-<body class="flex min-h-screen font-sans text-sm text-ink {{ $isAdmin ? 'bg-[#FAF8F5]' : 'bg-[#FDFDFD]' }}">
+<body class="panel-shell flex min-h-screen font-sans text-sm text-ink {{ $isAdmin ? 'bg-[#FAF8F5]' : 'bg-[#FDFDFD]' }}">
 
-<aside class="sticky top-0 flex h-screen w-[210px] shrink-0 flex-col bg-brand p-4 text-cream max-md:w-[70px] max-md:px-2">
+<aside class="panel-sidebar sticky top-0 flex h-screen w-[230px] shrink-0 flex-col p-4 text-cream max-md:w-[70px] max-md:px-2">
     <div class="mb-3 flex items-center gap-2 border-b border-cream/20 pb-3 max-md:justify-center">
-        <div class="grid size-8 shrink-0 place-items-center overflow-hidden rounded-md bg-sand text-lg">
-            {{-- <img src="{{ asset('images/logo-solstice.png') }}" alt="Logo" class="size-full object-cover"> --}}
-            ☕
+        <div class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-sand text-lg shadow-inner">
+            @if (file_exists(public_path('images/solstice-logo.jpeg')))
+                <img src="{{ asset('images/solstice-logo.jpeg') }}" alt="Logo Solstice Coffee" class="size-full object-cover">
+            @else
+                <span aria-hidden="true">☕</span>
+            @endif
         </div>
         <div class="max-md:hidden">
-            <strong class="block font-display text-sm">Solstice Coffe</strong>
-            <small class="text-[9px] opacity-75">{{ $isAdmin ? 'Admin' : 'Kasir' }} Panel v1.0</small>
+            <strong class="block font-display text-sm">Solstice Coffee</strong>
+            <small class="text-[10px] opacity-75">{{ $isAdmin ? 'Admin' : 'Kasir' }} Panel</small>
         </div>
     </div>
 
@@ -57,7 +60,7 @@
                     : request()->routeIs($route);
             @endphp
             <a href="{{ Route::has($route) ? route($route) : '#' }}"
-               title="{{ $label }}" class="flex items-center gap-2 rounded-md px-2.5 py-2 transition {{ $isActive ? 'bg-cream font-semibold text-brand' : 'hover:bg-cream/10' }}">
+               title="{{ $label }}" @if($isActive) aria-current="page" @endif class="flex items-center gap-2 rounded-lg px-2.5 py-2.5 transition {{ $isActive ? 'bg-cream font-semibold text-brand shadow-sm' : 'hover:bg-cream/10' }}">
                 {!! $svg($icon, 15) !!}<span class="max-md:hidden">{{ $label }}</span>
             </a>
         @endforeach
@@ -82,7 +85,7 @@
 </aside>
 
 <div class="min-w-0 flex-1">
-    <header class="flex h-[54px] items-center justify-between border-b border-line bg-white px-6 max-sm:px-3">
+    <header class="panel-topbar flex h-[62px] items-center justify-between border-b border-line bg-white px-6 max-sm:px-3">
         <h1 class="font-display text-xl font-bold text-brand max-sm:text-base">@yield('title')</h1>
         <div class="flex items-center gap-2 text-[10px] text-muted max-sm:gap-1">
             <span class="flex items-center gap-2">
@@ -94,13 +97,64 @@
             </span>
         </div>
     </header>
-    <section class="p-6 max-sm:p-3">
+    <section class="panel-content p-6 max-sm:p-3">
         @if (session('success'))<div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-800">{{ session('success') }}</div>@endif
         @if (session('error'))<div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">{{ session('error') }}</div>@endif
         @if ($errors->any())<div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800"><ul class="list-disc pl-4">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
         @yield('content')
     </section>
 </div>
+
+<script>
+    // Move admin action forms into native modal dialogs so tables/cards cannot cover them.
+    document.querySelectorAll('.panel-content details').forEach((details, index) => {
+        const summary = details.querySelector('summary');
+        const form = details.querySelector('form');
+        if (!summary || !form || typeof HTMLDialogElement === 'undefined') return;
+
+        const dialogId = `solstice-action-${index + 1}`;
+        const label = summary.textContent.trim() || 'Form tindakan';
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = summary.className.replace('cursor-pointer', '');
+        trigger.innerHTML = summary.innerHTML;
+        trigger.setAttribute('aria-controls', dialogId);
+        trigger.setAttribute('aria-haspopup', 'dialog');
+        trigger.setAttribute('aria-label', label);
+
+        const dialog = document.createElement('dialog');
+        dialog.id = dialogId;
+        dialog.className = 'action-dialog';
+        dialog.setAttribute('aria-label', `${label} — Solstice Coffee`);
+        form.classList.add('action-form');
+        ['absolute', 'right-0', 'z-10', 'mt-2', 'w-72', 'w-56', 'w-64', 'w-[min(90vw,340px)]', 'w-[min(90vw,360px)]'].forEach(token => form.classList.remove(token));
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'dialog-close';
+        close.setAttribute('aria-label', 'Tutup formulir');
+        close.textContent = '×';
+        close.addEventListener('click', () => dialog.close());
+        form.prepend(close);
+
+        if (!form.querySelector('h2, h3')) {
+            const heading = document.createElement('h2');
+            heading.className = 'dialog-heading';
+            const pageTitle = document.querySelector('.panel-topbar h1')?.textContent.trim() || 'data';
+            const subject = pageTitle.toLowerCase().includes('pengguna') ? 'pengguna' : pageTitle.toLowerCase().includes('menu') ? 'menu' : 'data';
+            heading.textContent = label.toLowerCase() === 'edit' ? `Edit ${subject}` : label.replace(/^[+\s]+/, '');
+            close.after(heading);
+        }
+
+        trigger.addEventListener('click', () => dialog.showModal());
+        dialog.addEventListener('click', event => {
+            if (event.target === dialog) dialog.close();
+        });
+        dialog.append(form);
+        details.replaceWith(trigger);
+        document.body.append(dialog);
+    });
+</script>
 
 </body>
 </html>

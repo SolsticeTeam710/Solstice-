@@ -1,6 +1,8 @@
 (() => {
   const productsEl = document.getElementById("products"), cart = /* @__PURE__ */ new Map();
   let products = [], category = "all", query = "", payment = "CASH";
+  const tableParam = new URLSearchParams(window.location.search).get("meja");
+  const tableNumber = /^0?[1-4]$/.test(tableParam || "") ? Number(tableParam) : null;
   let lastOrderId = sessionStorage.getItem("solsticeLastOrderId");
   let trackingRequestInFlight = false;
   const trackLastOrderButton = document.getElementById("track-last-order");
@@ -52,7 +54,7 @@
     const shown = products.filter((item) => (category === "all" || categoryKey(item) === category) && `${itemName(item)} ${item.deskripsi || ""}`.toLowerCase().includes(query.toLowerCase()));
     productsEl.innerHTML = shown.length ? shown.map((item) => {
       const id = itemId(item), amount = cart.get(id)?.quantity || 0;
-      return `<article class="product"><div class="product-photo">${picture(item)}</div><div class="product-body"><h2 class="product-title">${escapeHtml(itemName(item))}</h2><div class="product-desc">${escapeHtml(item.deskripsi || item.nama_kategori || "Dibuat segar untuk Anda")}</div><div class="product-bottom"><span class="price">${format(itemPrice(item))}</span><button class="add" data-add="${escapeHtml(id)}">${amount ? `+ Tambah (${amount})` : "+ Tambah"}</button></div></div></article>`;
+      return `<article class="product"><div class="product-photo">${picture(item)}</div><div class="product-body"><h2 class="product-title">${escapeHtml(itemName(item))}</h2><div class="product-desc">${escapeHtml(item.deskripsi || item.nama_kategori || "Dibuat segar untuk Anda")}</div><div class="product-bottom"><span class="price">${format(itemPrice(item))}</span><button class="add" data-add="${escapeHtml(id)}" aria-label="Tambah ${escapeHtml(itemName(item))} ke keranjang">${amount ? `+ Tambah (${amount})` : "+ Tambah"}</button></div></div></article>`;
     }).join("") : `<div class="empty">${products.length ? "Menu tidak ditemukan. Coba kata kunci lain." : "Menu belum tersedia saat ini."}</div>`;
   }
   function renderCart() {
@@ -189,7 +191,11 @@
     const filter = event.target.closest("[data-category]");
     if (filter) {
       category = filter.dataset.category;
-      document.querySelectorAll(".filter").forEach((button) => button.classList.toggle("active", button === filter));
+      document.querySelectorAll(".filter").forEach((button) => {
+        const selected = button === filter;
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
       renderProducts();
     }
     const add = event.target.closest("[data-add]");
@@ -219,7 +225,11 @@
     const option = event.target.closest("[data-payment]");
     if (option) {
       payment = option.dataset.payment;
-      document.querySelectorAll(".payment-option").forEach((button) => button.classList.toggle("active", button === option));
+      document.querySelectorAll(".payment-option").forEach((button) => {
+        const selected = button === option;
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
     }
   });
   document.getElementById("menu-search").addEventListener("input", (event) => {
@@ -232,6 +242,11 @@
   document.getElementById("confirm-order").addEventListener("click", async (event) => {
     if (!quantity()) {
       showPage("menu");
+      return;
+    }
+
+    if (tableNumber === null) {
+      toast("Nomor meja tidak valid. Silakan pindai QR di meja Anda.");
       return;
     }
 
@@ -265,6 +280,7 @@
         },
         body: JSON.stringify({
           nama_pelanggan: name,
+          nomor_meja: tableNumber,
           metode_pembayaran: payment,
           catatan: document.getElementById("order-note").value.trim(),
           items,

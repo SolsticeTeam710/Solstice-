@@ -125,6 +125,32 @@ body {
   color: var(--muted);
   font-size: 18px;
 }
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+.track-last-order {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -7px 0 15px auto;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--coffee);
+  font: 600 12px "Instrument Sans", sans-serif;
+  transition: background .16s ease, border-color .16s ease;
+}
+.track-last-order[hidden] { display: none; }
+.track-last-order:hover { border-color: var(--coffee); background: #fbf6ee; }
+.track-last-order svg { width: 17px; height: 17px; }
 .filters {
   display: flex;
   gap: 8px;
@@ -153,10 +179,20 @@ body {
   gap: 15px;
 }
 .product {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 13px;
   background: #fff;
+  box-shadow: 0 4px 16px #30282008;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.product:hover {
+  transform: translateY(-2px);
+  border-color: #d7c3aa;
+  box-shadow: 0 10px 25px #30282012;
 }
 .product-photo {
   height: 168px;
@@ -180,6 +216,9 @@ body {
   filter: drop-shadow(0 6px 5px #56392327);
 }
 .product-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   background: var(--cream);
   padding: 12px 13px 13px;
 }
@@ -188,17 +227,22 @@ body {
   margin: 0 0 4px;
 }
 .product-desc {
-  min-height: 16px;
+  display: -webkit-box;
+  min-height: 31px;
+  overflow: hidden;
   color: #766e64;
   font-size: 11px;
   line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .product-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: auto;
+  padding-top: 12px;
 }
 .price {
   color: var(--coffee);
@@ -253,7 +297,9 @@ body {
   gap: 12px;
 }
 .cart-icon {
-  font-size: 21px;
+  width: 25px;
+  height: 25px;
+  flex: none;
 }
 .cart-info small {
   display: block;
@@ -300,8 +346,8 @@ body {
   gap: 9px;
 }
 .qty button {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: white;
@@ -629,4 +675,58 @@ body {
 }
 .success-action {
   margin-top: 16px;
+}
+.payment-option strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.payment-icon {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  color: var(--coffee);
+}
+.payment-option:hover,
+.secondary:hover {
+  border-color: var(--coffee);
+  background: #fbf6ee;
+}
+.primary:focus-visible,
+.secondary:focus-visible,
+.payment-option:focus-visible,
+.add:focus-visible,
+.cart-link:focus-visible,
+.qty button:focus-visible {
+  outline: 3px solid #704f3955;
+  outline-offset: 2px;
+}
+.primary:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+.search input { min-height: 46px; padding-right: 14px; }
+.filter { min-height: 38px; font-size: 12px; transition: background .16s ease, border-color .16s ease, color .16s ease; }
+.add, .primary, .secondary, .cart-link, .qty button { transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
+.add:active, .primary:active, .secondary:active, .cart-link:active, .qty button:active { transform: scale(.98); }
+.panel { box-shadow: 0 6px 22px #30282008; }
+.page-desc { line-height: 1.55; }
+.total-row { align-items: center; gap: 12px; }
+.total-row strong { text-align: right; white-space: nowrap; }
+.notice { line-height: 1.6; }
+.success-title { line-height: 1.2; }
+@media (max-width: 420px) {
+  .top { align-items: flex-start; }
+  .brand { min-width: 0; }
+  .brand-sub { max-width: 180px; line-height: 1.35; }
+  .table-chip { padding: 7px 9px; font-size: 10px; }
+  .cartbar { gap: 8px; }
+  .cart-info { gap: 8px; }
+  .cart-info strong { font-size: 13px; }
+  .cart-link { font-size: 12px; }
+  .queue { gap: 8px; }
+  .queue div { min-width: 0; padding: 11px 13px; }
+  .queue strong { font-size: 17px; }
+  .payment-options { gap: 7px; }
+  .payment-option { padding: 11px 9px; }
 }

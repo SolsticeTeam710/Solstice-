@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Pesan di Meja {{ request('meja', '04') }} — Solstice Coffe</title>
+    <title>Pesan di Meja {{ request('meja', '04') }} — Solstice Coffee</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,9 +15,9 @@
     <div class="app">
         <header class="top">
             <div class="brand">
-                <img class="logo" src="{{ asset('images/solstice-logo.jpeg') }}" alt="Solstice Coffe">
+                <img class="logo" src="{{ asset('images/solstice-logo.jpeg') }}" alt="Solstice Coffee">
                 <div>
-                    <div class="brand-name">Solstice Coffe</div>
+                    <div class="brand-name">Solstice Coffee</div>
                     <div class="brand-sub">Pesan langsung dari meja Anda</div>
                 </div>
             </div>
@@ -35,16 +35,17 @@
                     </div>
                 </div>
 
-                <button id="track-last-order" type="button" hidden>
+                <button id="track-last-order" class="track-last-order" type="button" hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v15H4z"/><path d="M8 3v4M16 3v4M8 11h8M8 15h5"/></svg>
                     Lacak Pesanan Terakhir
                 </button>
 
                 <label class="search">
-                    <span aria-hidden="true">⌕</span>
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
                     <input id="menu-search" type="search" placeholder="Cari kopi atau makanan..." aria-label="Cari menu">
                 </label>
 
-                <div class="filters" id="category-filters" aria-label="Filter kategori menu">
+                <div class="filters" id="category-filters" role="group" aria-label="Filter kategori menu">
                     <button class="filter active" data-category="all" aria-pressed="true">Semua</button>
                     <button class="filter" data-category="coffee" aria-pressed="false">Kopi</button>
                     <button class="filter" data-category="non-coffee" aria-pressed="false">Non-Kopi</button>
@@ -101,13 +102,13 @@
 
                         <section class="panel">
                             <h2>Pilih metode pembayaran</h2>
-                            <div class="payment-options">
-                                <button type="button" class="payment-option active" data-payment="CASH">
-                                    <strong>💵 &nbsp; Tunai</strong>
+                            <div class="payment-options" role="group" aria-label="Metode pembayaran">
+                                <button type="button" class="payment-option active" data-payment="CASH" aria-pressed="true">
+                                    <strong><svg class="payment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M7 9h.01M17 15h.01"/></svg> Tunai</strong>
                                     <small>Bayar di kasir</small>
                                 </button>
-                                <button type="button" class="payment-option" data-payment="QRIS">
-                                    <strong>▦ &nbsp; QRIS</strong>
+                                <button type="button" class="payment-option" data-payment="QRIS" aria-pressed="false">
+                                    <strong><svg class="payment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path d="M9 9h2v2H9zM14 9h2v2h-2zM9 14h2v2H9zM14 14h2v2h-2z"/></svg> QRIS</strong>
                                     <small>Pindai kode di kasir</small>
                                 </button>
                             </div>
@@ -128,9 +129,9 @@
             <section class="page" id="page-success">
                 <div class="panel center">
                     <div class="success-icon" aria-hidden="true">✓</div>
-                    <div class="eyebrow">Pratinjau pesanan</div>
+                    <div class="eyebrow">Pesanan berhasil dibuat</div>
                     <h1 class="success-title">Terima kasih, <span id="success-name">Teman</span>!</h1>
-                    <p class="page-desc">Ringkasan pesanan Anda siap ditunjukkan kepada kasir.</p>
+                    <p class="page-desc">Pesanan Anda sudah masuk ke sistem. Simpan Order ID untuk mengecek statusnya.</p>
                     <div class="order-code" id="success-order">#SC-000</div>
 
                     <div class="queue">
@@ -210,7 +211,7 @@
 
         <aside class="cartbar" id="cartbar" aria-label="Ringkasan keranjang">
             <div class="cart-info">
-                <span class="cart-icon" aria-hidden="true">▣</span>
+                <svg class="cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 1.9-1.4L22 9H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
                 <div>
                     <small id="cart-count">0 item dipilih</small>
                     <strong id="cart-sum">Rp 0</strong>

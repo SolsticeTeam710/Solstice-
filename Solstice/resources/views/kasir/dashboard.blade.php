@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Kasir - Solstice Coffe</title>
+    <title>Kasir — Solstice Coffee</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,18 +15,30 @@
         @media(max-width:900px){.sidebar{width:74px;padding:16px 9px}.brand{justify-content:center;padding:0 0 14px}.brand-copy,.nav-label,.profile-copy,.logout{display:none}.nav button{justify-content:center;padding:11px 5px}.profile{justify-content:center}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.content{padding:20px}.topbar{padding:0 20px}}
         @media(max-width:560px){.sidebar{width:58px;padding:12px 6px}.brand-logo{width:34px;height:34px}.content{padding:15px 12px}.topbar{height:56px;padding:0 12px}.topbar h1{font-size:18px}.session{gap:6px;font-size:9px}.shift{padding:6px 7px}.stats{gap:8px}.stat{padding:13px;min-height:100px}.stat-number{font-size:20px}.card{padding:13px}.card-head{align-items:flex-start}.detail-layout{grid-template-columns:1fr}.detail-list{grid-template-columns:100px 1fr}}
         @media print{.sidebar,.topbar,.no-print{display:none!important}.main{width:100%}.content{padding:0}.view{display:none!important}#view-receipt{display:block!important}.receipt{border:0;max-width:100%}}
-    </style>
+</style>
+<style>
+    .nav-icon{width:18px;height:18px;flex:none;text-align:center;font-size:16px}
+    .nav button{min-height:42px;transition:background .16s ease,color .16s ease,transform .16s ease}
+    .nav button:hover{transform:translateX(2px)}
+    .nav button:focus-visible,.btn:focus-visible,.input:focus-visible{outline:3px solid #d8b98d;outline-offset:2px}
+    .card,.stat{box-shadow:0 5px 20px rgb(48 40 32 / 4%)}
+    .card{border-radius:15px}
+    .table-wrap th{letter-spacing:.02em}
+    .table-wrap tbody tr:hover{background:#fcfaf7}
+    .btn:disabled{opacity:.6;cursor:wait}
+    @media(max-width:560px){.session>span:first-child{font-size:0}.session>span:first-child:first-letter{font-size:12px}.content{padding-bottom:28px}}
+</style>
 </head>
 <body>
 <div class="shell">
     <aside class="sidebar">
-        <div class="brand"><img class="brand-logo" src="{{ asset('images/solstice-logo.jpeg') }}" alt="Logo Solstice"><div class="brand-copy"><strong>Solstice Coffe</strong><small>Kasir Panel v1.0</small></div></div>
+        <div class="brand"><img class="brand-logo" src="{{ asset('images/solstice-logo.jpeg') }}" alt="Logo Solstice Coffee"><div class="brand-copy"><strong>Solstice Coffee</strong><small>Kasir Panel</small></div></div>
         <nav class="nav" aria-label="Navigasi kasir">
-            <button class="active" data-view="dashboard"><span class="nav-icon">▦</span><span class="nav-label">Dashboard</span></button>
-            <button data-view="orders"><span class="nav-icon">☷</span><span class="nav-label">Daftar Pesanan</span></button>
-            <button data-view="search"><span class="nav-icon">⌕</span><span class="nav-label">Cari Order</span></button>
-            <button data-view="verify"><span class="nav-icon">▣</span><span class="nav-label">Verifikasi Bayar</span></button>
-            <button data-view="receipt"><span class="nav-icon">▤</span><span class="nav-label">Cetak Struk</span></button>
+            <button class="active" data-view="dashboard" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg><span class="nav-label">Dashboard</span></button>
+            <button data-view="orders"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span class="nav-label">Daftar Pesanan</span></button>
+            <button data-view="search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="nav-label">Cari Order</span></button>
+            <button data-view="verify"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="nav-label">Verifikasi Bayar</span></button>
+            <button data-view="receipt"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span class="nav-label">Cetak Struk</span></button>
         </nav>
         <div class="profile"><div class="avatar">{{ strtoupper(substr(auth()->user()->name ?? 'K1', 0, 2)) }}</div><div class="profile-copy"><strong>{{ auth()->user()->name ?? 'Kasir' }}</strong><small>Kasir Shift Pagi</small></div><form method="POST" action="{{ route('logout') }}">@csrf<button class="logout" aria-label="Keluar" title="Keluar">⇥</button></form></div>
     </aside>
@@ -142,7 +154,7 @@
     }
 
     async function findOrder(id){if(!id.trim())throw new Error('Masukkan Order ID terlebih dahulu.');return request(`${api}/orders/${encodeURIComponent(id.trim())}`)}
-    function receipt(order){const id=get(order,'order_id','id_pesanan')||'—';return `<h2>Solstice Coffe</h2><p>Struk Pembelian</p><hr><div class="receipt-row"><span>Order ID</span><strong>${esc(id)}</strong></div><div class="receipt-row"><span>Tanggal</span><span>${date(get(order,'tanggal','created_at'))}</span></div><div class="receipt-row"><span>Status</span><span>${esc(statusText(get(order,'status','status_pesanan')))}</span></div><hr><div class="receipt-row receipt-total"><span>Total</span><span>${money(get(order,'total_harga','total'))}</span></div><hr><p>Terima kasih telah berkunjung ☕</p><p>Solstice Coffe</p>`}
+    function receipt(order){const id=get(order,'order_id','id_pesanan')||'—';return `<h2>Solstice Coffee</h2><p>Struk Pembelian</p><hr><div class="receipt-row"><span>Order ID</span><strong>${esc(id)}</strong></div><div class="receipt-row"><span>Tanggal</span><span>${date(get(order,'tanggal','created_at'))}</span></div><div class="receipt-row"><span>Status</span><span>${esc(statusText(get(order,'status','status_pesanan')))}</span></div><hr><div class="receipt-row receipt-total"><span>Total</span><span>${money(get(order,'total_harga','total'))}</span></div><hr><p>Terima kasih telah berkunjung ☕</p><p>Solstice Coffee</p>`}
 
     document.addEventListener('click', async event => {
         const nav = event.target.closest('[data-view]');
