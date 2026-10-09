@@ -279,12 +279,12 @@
           "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
         },
         body: JSON.stringify({
-          nama_pelanggan: name,
-          nomor_meja: tableNumber,
-          metode_pembayaran: payment,
-          catatan: document.getElementById("order-note").value.trim(),
-          items,
-        }),
+  nama_pelanggan: name,
+  nomor_meja: Number(new URLSearchParams(window.location.search).get("meja")),
+  metode_pembayaran: payment,
+  catatan: document.getElementById("order-note").value.trim(),
+  items,
+}),
       });
 
       const result = await response.json().catch(() => ({}));
