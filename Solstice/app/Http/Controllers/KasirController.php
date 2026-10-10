@@ -45,7 +45,8 @@ class KasirController extends Controller
 {
     $pesanan = DB::table('pesanan')
         ->leftJoin('meja', 'meja.id_pesanan', '=', 'pesanan.id_pesanan')
-        ->select('pesanan.*', 'meja.nomor_meja')
+        ->leftJoin('pembayaran', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+        ->select('pesanan.*', 'meja.nomor_meja', 'pembayaran.kembalian')
         ->where('pesanan.order_id', $orderId)
         ->first();
 
@@ -97,20 +98,22 @@ public function verify(string $orderId)
             ->sum('subtotal');
 
         $total = (float) $order->total_harga;
+        $bayar = (float) ($order->nominal_bayar ?? $total);
+        $kembalian = max(0, $bayar - $total);
 
         DB::table('pembayaran')->insert([
             'id_pesanan' => $order->id_pesanan,
             'tanggal' => now(),
             'metode_pembayaran' => $order->metode_pembayaran ?? 'CASH',
-            'bayar' => $total,
-            'kembalian' => 0,
+            'bayar' => $bayar,
+            'kembalian' => $kembalian,
             'subtotal' => $subtotal,
             'total' => $total,
         ]);
 
         DB::table('pesanan')
             ->where('id_pesanan', $order->id_pesanan)
-            ->update(['status' => 'diproses']);
+            ->update(['status' => 'selesai']);
     });
 
     return response()->json(['message' => 'Pembayaran diverifikasi.']);

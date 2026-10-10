@@ -66,9 +66,26 @@
     document.getElementById("cart-totals").innerHTML = totalsMarkup();
     document.getElementById("checkout-items").innerHTML = rows || '<div class="empty">Belum ada item.</div>';
     document.getElementById("checkout-totals").innerHTML = totalsMarkup();
+    renderCashChange();
     document.getElementById("go-checkout").disabled = !lines.length;
     document.getElementById("go-checkout").style.opacity = lines.length ? "1" : ".55";
     renderProducts();
+  }
+  function renderCashChange() {
+    const panel = document.getElementById("cash-change-panel");
+    const input = document.getElementById("cash-amount");
+    const result = document.getElementById("cash-change-result");
+    if (!panel || !input || !result) return;
+    panel.hidden = payment !== "CASH";
+    if (payment !== "CASH") return;
+    const amount = Number(input.value);
+    if (!input.value || !Number.isFinite(amount) || amount < 0) {
+      result.textContent = "Masukkan jumlah uang untuk melihat kembalian.";
+    } else if (amount < total()) {
+      result.textContent = `Uang masih kurang ${format(total() - amount)}.`;
+    } else {
+      result.textContent = `Kembalian: ${format(amount - total())}`;
+    }
   }
   function totalsMarkup() {
     return `<div class="total-row"><span>Subtotal</span><strong>${format(subtotal())}</strong></div><div class="total-row"><span>PB1 (Pajak 10%)</span><strong>${format(tax())}</strong></div><div class="total-row grand"><span>Total pembayaran</span><strong>${format(total())}</strong></div>`;
@@ -101,24 +118,18 @@
           message: "Pesanan diterima. Menunggu konfirmasi kasir.",
           step2Title: "Menunggu konfirmasi kasir",
           step2Description: "Kasir akan mengonfirmasi pesanan dan pembayaran Anda.",
-          step3Title: "Siap diambil",
-          step3Description: "Pesanan akan ditandai siap setelah selesai dibuat.",
         },
         diproses: {
           currentStep: 3,
           message: "Pembayaran dikonfirmasi. Pesanan sedang disiapkan.",
           step2Title: "Pesanan dikonfirmasi kasir",
           step2Description: "Pembayaran Anda sudah diverifikasi.",
-          step3Title: "Pesanan sedang disiapkan",
-          step3Description: "Kasir sedang menyiapkan pesanan Anda.",
         },
         siap: {
           currentStep: 3,
           message: "Pesanan siap diambil.",
           step2Title: "Pesanan dikonfirmasi kasir",
           step2Description: "Pembayaran Anda sudah diverifikasi.",
-          step3Title: "Siap diambil",
-          step3Description: "Silakan ambil pesanan di meja kasir.",
         },
         selesai: {
           currentStep: 3,
@@ -126,8 +137,6 @@
           message: "Pesanan selesai dan sudah diserahkan. Terima kasih!",
           step2Title: "Pesanan dikonfirmasi kasir",
           step2Description: "Pembayaran Anda sudah diverifikasi.",
-          step3Title: "Pesanan selesai",
-          step3Description: "Pesanan Anda sudah diserahkan.",
         },
       };
       const state = states[result.status];
@@ -137,14 +146,9 @@
       if (message) message.textContent = state.message;
 
       const step2 = document.querySelector('[data-track-step="2"]');
-      const step3 = document.querySelector('[data-track-step="3"]');
       if (step2) {
         step2.querySelector("strong").textContent = state.step2Title;
         step2.querySelector("p").textContent = state.step2Description;
-      }
-      if (step3) {
-        step3.querySelector("strong").textContent = state.step3Title;
-        step3.querySelector("p").textContent = state.step3Description;
       }
 
       document.querySelectorAll("[data-track-step]").forEach((step) => {
@@ -230,12 +234,14 @@
         button.classList.toggle("active", selected);
         button.setAttribute("aria-pressed", String(selected));
       });
+      renderCashChange();
     }
   });
   document.getElementById("menu-search").addEventListener("input", (event) => {
     query = event.target.value.trim();
     renderProducts();
   });
+  document.getElementById("cash-amount").addEventListener("input", renderCashChange);
   document.getElementById("go-checkout").addEventListener("click", () => {
     if (quantity()) showPage("checkout");
   });
@@ -254,6 +260,13 @@
     if (!name) {
       document.getElementById("customer-name").focus();
       toast("Masukkan nama pelanggan terlebih dahulu.");
+      return;
+    }
+
+    const cashAmount = Number(document.getElementById("cash-amount").value);
+    if (payment === "CASH" && (!document.getElementById("cash-amount").value || cashAmount < total())) {
+      document.getElementById("cash-amount").focus();
+      toast("Masukkan uang tunai minimal sebesar total pembayaran.");
       return;
     }
 
@@ -282,6 +295,7 @@
   nama_pelanggan: name,
   nomor_meja: Number(new URLSearchParams(window.location.search).get("meja")),
   metode_pembayaran: payment,
+  nominal_bayar: payment === "CASH" ? cashAmount : total(),
   catatan: document.getElementById("order-note").value.trim(),
   items,
 }),

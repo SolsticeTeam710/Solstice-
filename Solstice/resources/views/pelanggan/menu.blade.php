@@ -112,6 +112,11 @@
                                     <small>Pindai kode di kasir</small>
                                 </button>
                             </div>
+                            <div id="cash-change-panel" class="field" aria-live="polite">
+                                <label for="cash-amount">Uang tunai yang dibayarkan</label>
+                                <input id="cash-amount" type="number" min="0" step="500" inputmode="numeric" placeholder="Masukkan jumlah uang">
+                                <div class="notice" id="cash-change-result">Masukkan jumlah uang untuk melihat kembalian.</div>
+                            </div>
                             <div class="notice">Pembayaran dilakukan kepada kasir setelah pesanan Anda dikonfirmasi.</div>
                         </section>
                     </div>
@@ -188,13 +193,6 @@
                             <div>
                                 <strong>Menunggu konfirmasi kasir</strong>
                                 <p>Kasir akan mengonfirmasi pesanan dan pembayaran Anda.</p>
-                            </div>
-                        </div>
-                        <div class="step" data-track-step="3">
-                            <span class="step-mark">3</span>
-                            <div>
-                                <strong>Siap diambil</strong>
-                                <p>Silakan ambil pesanan di meja kasir saat sudah siap.</p>
                             </div>
                         </div>
                     </div>
