@@ -1,6 +1,9 @@
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+
 (() => {
   const productsEl = document.getElementById("products"), cart = /* @__PURE__ */ new Map();
   let products = [], category = "all", query = "", payment = "CASH";
+  let qrisScanner = null, resolveQrisScan = null;
   const tableParam = new URLSearchParams(window.location.search).get("meja");
   const tableNumber = /^0?[1-4]$/.test(tableParam || "") ? Number(tableParam) : null;
   let lastOrderId = sessionStorage.getItem("solsticeLastOrderId");
@@ -37,6 +40,61 @@
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => node.classList.remove("show"), 2400);
   };
+  async function finishQrisScan(scanned) {
+    const scanner = qrisScanner;
+    const resolve = resolveQrisScan;
+    qrisScanner = null;
+    resolveQrisScan = null;
+
+    if (scanner) {
+      try {
+        if (scanner.isScanning) await scanner.stop();
+      } catch (_) {}
+      try { scanner.clear(); } catch (_) {}
+    }
+
+    document.getElementById("qris-scanner-modal").hidden = true;
+    resolve?.(scanned);
+  }
+
+  function scanQris() {
+    const modal = document.getElementById("qris-scanner-modal");
+    const message = document.getElementById("qris-scanner-message");
+    modal.hidden = false;
+    message.textContent = "Izinkan akses kamera, lalu arahkan ke QRIS di kasir.";
+
+    const scanner = new Html5Qrcode("qris-reader", {
+      formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+      verbose: false,
+    });
+    qrisScanner = scanner;
+
+    return new Promise((resolve) => {
+      resolveQrisScan = resolve;
+      requestAnimationFrame(() => {
+        scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 240, height: 240 } },
+          (decodedText) => {
+            if (!decodedText.trim().startsWith("000201")) {
+              message.textContent = "Kode terbaca bukan QRIS. Arahkan kamera ke QRIS toko.";
+              return;
+            }
+            message.textContent = "QRIS terbaca. Pesanan sedang dikirim.";
+            void finishQrisScan(true);
+          },
+          () => {}
+        ).catch(() => {
+          message.textContent = "Kamera gagal dibuka. Izinkan akses kamera dan gunakan HTTPS atau localhost.";
+          void finishQrisScan(false);
+        });
+      });
+    });
+  }
+
+  document.getElementById("qris-scanner-cancel").addEventListener("click", () => {
+    void finishQrisScan(false);
+  });
   const picture = (item) => {
     const name = itemName(item).trim().toLowerCase();
     const mapped = name.includes("arak") ? "/images/menu/Arak.webp" : name.includes("matcha latte") ? "/images/menu/Matcha%20Latte.png" : null;
@@ -66,26 +124,9 @@
     document.getElementById("cart-totals").innerHTML = totalsMarkup();
     document.getElementById("checkout-items").innerHTML = rows || '<div class="empty">Belum ada item.</div>';
     document.getElementById("checkout-totals").innerHTML = totalsMarkup();
-    renderCashChange();
     document.getElementById("go-checkout").disabled = !lines.length;
     document.getElementById("go-checkout").style.opacity = lines.length ? "1" : ".55";
     renderProducts();
-  }
-  function renderCashChange() {
-    const panel = document.getElementById("cash-change-panel");
-    const input = document.getElementById("cash-amount");
-    const result = document.getElementById("cash-change-result");
-    if (!panel || !input || !result) return;
-    panel.hidden = payment !== "CASH";
-    if (payment !== "CASH") return;
-    const amount = Number(input.value);
-    if (!input.value || !Number.isFinite(amount) || amount < 0) {
-      result.textContent = "Masukkan jumlah uang untuk melihat kembalian.";
-    } else if (amount < total()) {
-      result.textContent = `Uang masih kurang ${format(total() - amount)}.`;
-    } else {
-      result.textContent = `Kembalian: ${format(amount - total())}`;
-    }
   }
   function totalsMarkup() {
     return `<div class="total-row"><span>Subtotal</span><strong>${format(subtotal())}</strong></div><div class="total-row"><span>PB1 (Pajak 10%)</span><strong>${format(tax())}</strong></div><div class="total-row grand"><span>Total pembayaran</span><strong>${format(total())}</strong></div>`;
@@ -234,14 +275,12 @@
         button.classList.toggle("active", selected);
         button.setAttribute("aria-pressed", String(selected));
       });
-      renderCashChange();
     }
   });
   document.getElementById("menu-search").addEventListener("input", (event) => {
     query = event.target.value.trim();
     renderProducts();
   });
-  document.getElementById("cash-amount").addEventListener("input", renderCashChange);
   document.getElementById("go-checkout").addEventListener("click", () => {
     if (quantity()) showPage("checkout");
   });
@@ -263,12 +302,7 @@
       return;
     }
 
-    const cashAmount = Number(document.getElementById("cash-amount").value);
-    if (payment === "CASH" && (!document.getElementById("cash-amount").value || cashAmount < total())) {
-      document.getElementById("cash-amount").focus();
-      toast("Masukkan uang tunai minimal sebesar total pembayaran.");
-      return;
-    }
+    const selectedPayment = payment;
 
     const items = [...cart.values()].map(({ item, quantity }) => ({
       id_menu: Number(item.id_menu),
@@ -284,6 +318,14 @@
     button.disabled = true;
 
     try {
+      if (selectedPayment === "QRIS") {
+        const scanned = await scanQris();
+        if (!scanned) {
+          toast("Scan QRIS dibatalkan. Pesanan belum dikirim.");
+          return;
+        }
+      }
+
       const response = await fetch("/api/pesanan", {
         method: "POST",
         headers: {
@@ -294,8 +336,7 @@
         body: JSON.stringify({
   nama_pelanggan: name,
   nomor_meja: Number(new URLSearchParams(window.location.search).get("meja")),
-  metode_pembayaran: payment,
-  nominal_bayar: payment === "CASH" ? cashAmount : total(),
+  metode_pembayaran: selectedPayment,
   catatan: document.getElementById("order-note").value.trim(),
   items,
 }),
@@ -316,6 +357,8 @@
       document.getElementById("success-order").textContent = `#${lastOrderId}`;
       document.getElementById("track-order").textContent = `#${lastOrderId}`;
       document.getElementById("success-total").textContent = format(result.order.total_harga);
+      document.getElementById("success-cash-note").hidden = selectedPayment === "QRIS";
+      document.getElementById("success-qris-note").hidden = selectedPayment !== "QRIS";
 
       cart.clear();
       renderCart();

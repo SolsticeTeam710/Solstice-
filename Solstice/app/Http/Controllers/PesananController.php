@@ -14,7 +14,6 @@ public function store(Request $request)
     $data = $request->validate([
         'nama_pelanggan' => ['required', 'string', 'max:100'],
         'metode_pembayaran' => ['required', 'in:CASH,QRIS'],
-        'nominal_bayar' => ['required_if:metode_pembayaran,CASH', 'nullable', 'numeric', 'min:0'],
         'catatan' => ['nullable', 'string', 'max:1000'],
         'items' => ['required', 'array', 'min:1'],
         'items.*.id_menu' => ['required', 'integer', 'distinct'],
@@ -76,15 +75,6 @@ if (!$meja || $meja->status !== 'kosong' || $meja->id_pesanan !== null) {
 
         // 10% mengikuti perhitungan di halaman pelanggan saat ini.
         $total = round($subtotal + ($subtotal * 0.10), 2);
-        $nominalBayar = $data['metode_pembayaran'] === 'CASH'
-            ? (float) $data['nominal_bayar']
-            : $total;
-
-        if ($nominalBayar < $total) {
-            throw ValidationException::withMessages([
-                'nominal_bayar' => 'Uang tunai harus sama dengan atau lebih dari total pembayaran.',
-            ]);
-        }
 
         $orderId = 'ORD-' . Str::upper(Str::random(12));
 
@@ -95,7 +85,6 @@ if (!$meja || $meja->status !== 'kosong' || $meja->id_pesanan !== null) {
             'order_id' => $orderId,
             'tanggal' => now(),
             'total_harga' => $total,
-            'nominal_bayar' => $nominalBayar,
             'catatan' => $data['catatan'] ?? null,
             'status' => 'pending',
         ], 'id_pesanan');

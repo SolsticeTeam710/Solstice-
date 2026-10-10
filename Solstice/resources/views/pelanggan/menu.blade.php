@@ -112,11 +112,6 @@
                                     <small>Pindai kode di kasir</small>
                                 </button>
                             </div>
-                            <div id="cash-change-panel" class="field" aria-live="polite">
-                                <label for="cash-amount">Uang tunai yang dibayarkan</label>
-                                <input id="cash-amount" type="number" min="0" step="500" inputmode="numeric" placeholder="Masukkan jumlah uang">
-                                <div class="notice" id="cash-change-result">Masukkan jumlah uang untuk melihat kembalian.</div>
-                            </div>
                             <div class="notice">Pembayaran dilakukan kepada kasir setelah pesanan Anda dikonfirmasi.</div>
                         </section>
                     </div>
@@ -150,8 +145,11 @@
                         </div>
                     </div>
 
-                    <div class="notice text-left">
+                    <div class="notice text-left" id="success-cash-note">
                         Pesanan berhasil disimpan. Tunjukkan Order ID ini kepada kasir untuk konfirmasi pembayaran.
+                    </div>
+                    <div class="notice text-left" id="success-qris-note" hidden>
+                        QRIS toko berhasil terbaca. Untuk membayar, pindai QR toko lewat aplikasi e-wallet/mobile banking dan masukkan total pesanan. Tunjukkan Order ID kepada kasir untuk verifikasi.
                     </div>
                     <p class="page-desc">Estimasi penyajian 10–15 menit setelah pesanan dikonfirmasi oleh kasir.</p>
                     <button class="primary success-action" data-page="tracking">Lihat Status Pesanan</button>
@@ -217,6 +215,20 @@
             </div>
             <button class="cart-link" data-page="cart">Keranjang &nbsp;›</button>
         </aside>
+
+        <div class="scanner-modal" id="qris-scanner-modal" hidden>
+            <section class="scanner-dialog" role="dialog" aria-modal="true" aria-labelledby="qris-scanner-title">
+                <div class="scanner-heading">
+                    <div>
+                        <h2 id="qris-scanner-title">Scan QRIS toko</h2>
+                        <p class="page-desc" id="qris-scanner-message">Izinkan akses kamera, lalu arahkan ke QRIS di kasir.</p>
+                    </div>
+                    <button type="button" class="secondary" id="qris-scanner-cancel">Batal</button>
+                </div>
+                <div id="qris-reader"></div>
+                <p class="page-desc">Scan ini membaca kode QRIS. Pembayaran tetap dilakukan lewat aplikasi e-wallet/mobile banking.</p>
+            </section>
+        </div>
 
         <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </div>

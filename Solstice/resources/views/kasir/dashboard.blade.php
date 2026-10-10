@@ -25,6 +25,10 @@
     .card{border-radius:15px}
     .table-wrap th{letter-spacing:.02em}
     .table-wrap tbody tr:hover{background:#fcfaf7}
+    .order-items{min-width:500px!important}
+    .order-items th,.order-items td{font-size:11px}
+    .cash-input{width:100%;max-width:240px}
+    .cash-hint{margin-top:5px}
     .btn:disabled{opacity:.6;cursor:wait}
     @media(max-width:560px){.session>span:first-child{font-size:0}.session>span:first-child:first-letter{font-size:12px}.content{padding-bottom:28px}}
 </style>
@@ -57,7 +61,7 @@
             </section>
 
             <section class="view" id="view-orders">
-                <section class="card"><div class="card-head"><div><h2>Daftar Pesanan</h2><p class="card-subtitle">Pantau status pesanan yang masuk.</p></div><button class="btn" data-refresh>↻ Segarkan</button></div><div class="filter-row" id="status-filters"><button class="filter-chip active" data-status="all">Semua</button><button class="filter-chip" data-status="pending">Menunggu konfirmasi kasir</button><button class="filter-chip" data-status="done">Selesai</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Order ID</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orders-table"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div><div id="orders-empty" class="empty" hidden><div class="empty-icon">☕</div>Belum ada pesanan.</div></section>
+                <section class="card"><div class="card-head"><div><h2>Daftar Pesanan</h2><p class="card-subtitle">Pantau status pesanan yang masuk.</p></div><button class="btn" data-refresh>↻ Segarkan</button></div><div class="filter-row" id="status-filters"><button class="filter-chip active" data-status="all">Semua</button><button class="filter-chip" data-status="pending">Menunggu konfirmasi kasir</button><button class="filter-chip" data-status="processing">Diproses</button><button class="filter-chip" data-status="ready">Siap diambil</button><button class="filter-chip" data-status="done">Selesai</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Order ID</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orders-table"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div><div id="orders-empty" class="empty" hidden><div class="empty-icon">☕</div>Belum ada pesanan.</div></section>
             </section>
 
             <section class="view" id="view-search">
@@ -98,8 +102,8 @@
                 timeZone: 'Asia/Jakarta',
             }).format(parsed);
     };
-    const normalize = status => { const s=String(status||'').toLowerCase(); if(['pending','baru','menunggu pembayaran','menunggu','menunggu konfirmasi kasir'].includes(s))return 'pending'; if(['diproses','processing','sedang diproses','siap','ready','siap diambil','siap disajikan','selesai','done','completed','lunas'].includes(s))return 'done'; return 'other'; };
-    const statusText = status => ({pending:'Menunggu konfirmasi kasir',done:'Selesai',other:status||'—'}[normalize(status)]);
+    const normalize = status => { const s=String(status||'').toLowerCase(); if(['pending','baru','menunggu pembayaran','menunggu','menunggu konfirmasi kasir'].includes(s))return 'pending'; if(['diproses','processing','sedang diproses'].includes(s))return 'processing'; if(['siap','ready','siap diambil','siap disajikan'].includes(s))return 'ready'; if(['selesai','done','completed','lunas'].includes(s))return 'done'; return 'other'; };
+    const statusText = status => ({pending:'Menunggu konfirmasi kasir',processing:'Sedang diproses',ready:'Siap diambil',done:'Selesai',other:status||'—'}[normalize(status)]);
     const badge = status => `<span class="badge ${normalize(status)}">${esc(statusText(status))}</span>`;
     const get = (obj,...keys) => { for(const key of keys)if(obj?.[key]!==undefined&&obj?.[key]!==null)return obj[key]; return null; };
 
@@ -129,28 +133,75 @@
         const id = get(order, 'order_id', 'id_pesanan') || '—';
         const status = get(order, 'status', 'status_pesanan') || 'pending';
         const stage = normalize(status);
+        const total = Number(get(order, 'total_harga', 'total') || 0);
+        const items = Array.isArray(order.items) ? order.items : [];
+        const subtotal = Number(get(order, 'subtotal') ?? items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0));
+        const tax = Number(get(order, 'pajak') ?? Math.max(0, total - subtotal));
+        const method = String(get(order, 'metode_pembayaran') || 'CASH').toUpperCase();
+        const isPending = stage === 'pending';
+        const itemRows = items.length ? items.map(item =>
+            '<tr><td>' + esc(item.nama_menu || 'Menu') + '</td><td>' + esc(item.jumlah_pesanan || 0) + '</td><td>' + money(item.harga_satuan) + '</td><td>' + money(item.subtotal) + '</td></tr>'
+        ).join('') : '<tr><td colspan="4" class="empty">Rincian produk tidak tersedia.</td></tr>';
+        const paidMarkup = isPending && method === 'CASH'
+            ? '<input class="input cash-input" type="number" min="0" step="1" inputmode="numeric" data-cash-amount data-total="' + total + '" placeholder="Masukkan uang yang diterima">'
+            : (isPending ? 'Menunggu verifikasi QRIS' : money(get(order, 'uang_dibayar') ?? total));
+        const change = isPending ? 0 : Number(get(order, 'kembalian') || 0);
 
         let action = '';
 
         if (stage === 'pending') {
             action = '<article class="card"><h2>Verifikasi Bayar</h2><p class="helper">Pastikan pembayaran sudah diterima sebelum dikonfirmasi.</p><div class="divider"></div><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Bayar</button></article>';
         } else {
-            action = '<article class="card"><h2>Pembayaran terkonfirmasi</h2><p class="helper">Status pesanan: Selesai.</p></article>';
+            action = '<article class="card"><h2>Pembayaran terkonfirmasi</h2><p class="helper">Status pesanan: ' + esc(statusText(status)) + '.</p></article>';
         }
 
         return '<section class="detail-layout">' +
-            '<article class="card"><div class="card-head"><div><h2>Rincian Pesanan #' + esc(id) + '</h2><p class="card-subtitle">' + badge(status) + '</p></div></div>' +
+            '<article class="card" data-order-card><div class="card-head"><div><h2>Rincian Pesanan #' + esc(id) + '</h2><p class="card-subtitle">' + badge(status) + '</p></div></div>' +
             '<dl class="detail-list"><dt>Order ID</dt><dd>' + esc(id) + '</dd>' +
             '<dt>Waktu pesan</dt><dd>' + date(get(order, 'tanggal', 'created_at')) + '</dd>' +
             '<dt>Pelanggan</dt><dd>' + esc(get(order, 'nama_pelanggan', 'nama', 'customer_name') || 'Informasi pelanggan tidak tersedia') + '</dd>' +
-            '<dt>Meja</dt><dd>' + esc(get(order, 'nomor_meja', 'meja') || '—') + '</dd>' +
+            '<dt>No. meja</dt><dd>' + esc(get(order, 'nomor_meja', 'meja') || '—') + '</dd>' +
             '<dt>Catatan</dt><dd>' + esc(get(order, 'catatan') || '—') + '</dd></dl>' +
-            '<div class="divider"></div><div class="detail-total"><span>Total tagihan</span><span>' +
-            money(get(order, 'total_harga', 'total')) + '</span></div></article>' + action + '</section>';
+            '<div class="divider"></div><h3 class="card-subtitle">Rincian produk</h3><div class="table-wrap"><table class="order-items"><thead><tr><th>Nama produk</th><th>Jumlah</th><th>Harga satuan</th><th>Subtotal</th></tr></thead><tbody>' + itemRows + '</tbody></table></div>' +
+            '<div class="divider"></div><dl class="detail-list"><dt>Metode pembayaran</dt><dd>' + esc(method) + '</dd>' +
+            '<dt>Subtotal</dt><dd>' + money(subtotal) + '</dd>' +
+            '<dt>Pajak (PB1 10%)</dt><dd>' + money(tax) + '</dd>' +
+            '<dt>Uang diterima</dt><dd>' + paidMarkup + '</dd>' +
+            '<dt>Kembalian</dt><dd data-change-preview>' + money(change) + '</dd>' +
+            '<dt>Total pembayaran</dt><dd><strong>' + money(total) + '</strong></dd></dl>' +
+            (isPending && method === 'CASH' ? '<p class="helper cash-hint" data-cash-hint>Masukkan nominal yang diterima kasir untuk menghitung kembalian.</p>' : '') +
+            '</article>' + action + '</section>';
     }
 
     async function findOrder(id){if(!id.trim())throw new Error('Masukkan Order ID terlebih dahulu.');return request(`${api}/orders/${encodeURIComponent(id.trim())}`)}
-    function receipt(order){const id=get(order,'order_id','id_pesanan')||'—';return `<h2>Solstice Coffee</h2><p>Struk Pembelian</p><hr><div class="receipt-row"><span>Order ID</span><strong>${esc(id)}</strong></div><div class="receipt-row"><span>Tanggal</span><span>${date(get(order,'tanggal','created_at'))}</span></div><div class="receipt-row"><span>Status</span><span>${esc(statusText(get(order,'status','status_pesanan')))}</span></div><hr><div class="receipt-row receipt-total"><span>Total</span><span>${money(get(order,'total_harga','total'))}</span></div><div class="receipt-row"><span>Kembalian</span><span>${money(get(order,'kembalian'))}</span></div><hr><p>Terima kasih telah berkunjung ☕</p><p>Solstice Coffee</p>`}
+    function receipt(order) {
+        const id = get(order, 'order_id', 'id_pesanan') || '—';
+        const items = Array.isArray(order.items) ? order.items : [];
+        const subtotal = Number(get(order, 'subtotal') ?? items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0));
+        const total = Number(get(order, 'total_harga', 'total') || 0);
+        const tax = Number(get(order, 'pajak') ?? Math.max(0, total - subtotal));
+        const itemRows = items.length
+            ? items.map(item => `<div class="receipt-product">
+                <strong>${esc(item.nama_menu || 'Menu')}</strong>
+                <div class="receipt-row"><span>${esc(item.jumlah_pesanan || 0)} × ${money(item.harga_satuan)}</span><span>${money(item.subtotal)}</span></div>
+            </div>`).join('')
+            : '<p>Rincian produk tidak tersedia.</p>';
+
+        return `<h2>Solstice Coffee</h2>
+            <p>Struk Pembelian</p><hr>
+            <div class="receipt-row"><span>Order ID</span><strong>${esc(id)}</strong></div>
+            <div class="receipt-row"><span>Waktu pesan</span><span>${date(get(order, 'tanggal', 'created_at'))}</span></div>
+            <div class="receipt-row"><span>Pelanggan</span><span>${esc(get(order, 'nama_pelanggan', 'nama', 'customer_name') || '—')}</span></div>
+            <div class="receipt-row"><span>Metode bayar</span><span>${esc(get(order, 'metode_pembayaran') || '—')}</span></div>
+            <hr><strong>Rincian produk</strong>${itemRows}
+            <hr><div class="receipt-row"><span>Catatan</span><span>${esc(get(order, 'catatan') || '—')}</span></div>
+            <div class="receipt-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
+            <div class="receipt-row"><span>Pajak</span><span>${money(tax)}</span></div>
+            <div class="receipt-row"><span>Uang diterima</span><span>${money(get(order, 'uang_dibayar') ?? total)}</span></div>
+            <div class="receipt-row"><span>Kembalian</span><span>${money(get(order, 'kembalian'))}</span></div>
+            <div class="receipt-row receipt-total"><span>Total pembayaran</span><span>${money(total)}</span></div>
+            <hr><p>Terima kasih telah berkunjung ☕</p><p>Solstice Coffee</p>`;
+    }
 
     document.addEventListener('click', async event => {
         const nav = event.target.closest('[data-view]');
@@ -183,7 +234,24 @@
         const verify = event.target.closest('[data-verify]');
         if (verify) {
             try {
-                await request(api + '/orders/' + encodeURIComponent(verify.dataset.verify) + '/verify', { method: 'PUT' });
+                const orderCard = verify.closest('.detail-layout')?.querySelector('[data-order-card]');
+                const cashInput = orderCard?.querySelector('[data-cash-amount]');
+                const options = { method: 'PUT' };
+
+                if (cashInput) {
+                    const amount = Number(cashInput.value);
+                    const total = Number(cashInput.dataset.total || 0);
+                    if (!cashInput.value || amount < total) {
+                        notify('Uang yang diterima harus sama dengan atau lebih dari total pembayaran.', 'error');
+                        cashInput.focus();
+                        return;
+                    }
+
+                    options.headers = { 'Content-Type': 'application/json' };
+                    options.body = JSON.stringify({ bayar: amount });
+                }
+
+                await request(api + '/orders/' + encodeURIComponent(verify.dataset.verify) + '/verify', options);
                 notify('Pembayaran berhasil diverifikasi.');
                 const order = await findOrder(verify.dataset.verify);
                 document.getElementById('verify-result').innerHTML = orderDetail(order);
@@ -194,6 +262,24 @@
         }
 
         if (event.target.closest('#print-receipt')) window.print();
+    });
+
+    document.addEventListener('input', event => {
+        const input = event.target.closest('[data-cash-amount]');
+        if (!input) return;
+
+        const card = input.closest('[data-order-card]');
+        const amount = Number(input.value || 0);
+        const total = Number(input.dataset.total || 0);
+        const preview = card?.querySelector('[data-change-preview]');
+        const hint = card?.querySelector('[data-cash-hint]');
+
+        if (preview) preview.textContent = money(Math.max(0, amount - total));
+        if (hint) hint.textContent = !input.value
+            ? 'Masukkan nominal yang diterima kasir untuk menghitung kembalian.'
+            : amount < total
+                ? `Uang masih kurang ${money(total - amount)}.`
+                : `Kembalian: ${money(amount - total)}.`;
     });
 
     document.getElementById('search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('search-result');box.innerHTML='<div class="loading">Mencari pesanan…</div>';try{const order=await findOrder(document.getElementById('search-input').value);box.innerHTML=orderDetail(order)}catch(error){box.innerHTML=`<div class="empty">${esc(error.message)}</div>`}});
