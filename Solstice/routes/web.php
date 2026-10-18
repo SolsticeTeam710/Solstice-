@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\PesananController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,7 @@ Route::get('/health', [HealthController::class, 'check']);
 Route::middleware('guest')->group(function () {
     Route::get('/login', fn () => view('auth.login'))->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'login'])
+        ->middleware('throttle:5,1')
         ->name('login.process');
 });
 
@@ -69,6 +71,9 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
 
 Route::get('/menu', [MenuController::class, 'index'])->name('pelanggan.menu');
 Route::get('/pesan', fn () => view('pelanggan.menu'))->name('pelanggan.pesan');
+Route::post('/api/pesanan', [PesananController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('api.pesanan.store');
 
 Route::middleware(['auth', 'role:kasir,admin'])
     ->prefix('api/kasir')
@@ -77,12 +82,6 @@ Route::middleware(['auth', 'role:kasir,admin'])
         Route::get('/orders', [KasirController::class, 'orders']);
         Route::get('/orders/{orderId}', [KasirController::class, 'search']);
         Route::put('/orders/{orderId}/verify', [KasirController::class, 'verify']);
-    });
-
-Route::middleware(['auth', 'role:kasir'])
-    ->prefix('api/kasir')
-    ->group(function () {
-        Route::put('/orders/{orderId}/status', [KasirController::class, 'updateStatus']);
     });
 
 Route::middleware(['auth', 'role:admin'])

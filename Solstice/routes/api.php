@@ -8,6 +8,5 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::post('/pesanan', [PesananController::class, 'store']);
 Route::get('/pesanan/{orderId}', [PesananController::class, 'show']);
 

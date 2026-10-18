@@ -97,7 +97,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
   });
   const picture = (item) => {
     const name = itemName(item).trim().toLowerCase();
-    const mapped = name.includes("arak") ? "/images/menu/Arak.webp" : name.includes("matcha latte") ? "/images/menu/Matcha%20Latte.png" : null;
+    const mapped = name.includes("arak") ? "/images/menu/Arak.webp" : name.includes("matcha latte") ? "/images/menu/Matcha%20Latte.webp" : null;
     const photo = item.foto;
     const fallback = categoryKey(item) === "coffee" ? "\u2615" : categoryKey(item) === "makanan" ? "\u{1F950}" : "\u{1F375}";
     let url = mapped;
@@ -160,29 +160,19 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
           step2Title: "Menunggu konfirmasi kasir",
           step2Description: "Kasir akan mengonfirmasi pesanan dan pembayaran Anda.",
         },
-        diproses: {
-          currentStep: 3,
-          message: "Pembayaran dikonfirmasi. Pesanan sedang disiapkan.",
-          step2Title: "Pesanan dikonfirmasi kasir",
-          step2Description: "Pembayaran Anda sudah diverifikasi.",
-        },
-        siap: {
-          currentStep: 3,
-          message: "Pesanan siap diambil.",
-          step2Title: "Pesanan dikonfirmasi kasir",
-          step2Description: "Pembayaran Anda sudah diverifikasi.",
-        },
         selesai: {
-          currentStep: 3,
           finished: true,
           message: "Pesanan selesai dan sudah diserahkan. Terima kasih!",
-          step2Title: "Pesanan dikonfirmasi kasir",
-          step2Description: "Pembayaran Anda sudah diverifikasi.",
+          step2Title: "Pembayaran terkonfirmasi",
+          step2Description: "Kasir telah memverifikasi pembayaran dan menyelesaikan pesanan.",
         },
       };
-      const state = states[result.status];
-
-      if (!state) throw new Error(`Status pesanan tidak dikenal: ${result.status || "kosong"}.`);
+      const state = states[result.status] || {
+        currentStep: 2,
+        message: "Status pesanan belum tersedia. Silakan tanyakan kepada kasir.",
+        step2Title: "Menunggu informasi dari kasir",
+        step2Description: "Kasir dapat membantu memastikan status pesanan Anda.",
+      };
 
       if (message) message.textContent = state.message;
 
