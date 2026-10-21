@@ -71,6 +71,10 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
 
 Route::get('/menu', [MenuController::class, 'index'])->name('pelanggan.menu');
 Route::get('/pesan', fn () => view('pelanggan.menu'))->name('pelanggan.pesan');
+Route::get('/csrf-token', fn () => response()
+    ->json(['token' => csrf_token()])
+    ->header('Cache-Control', 'no-store, private'))
+    ->name('csrf-token');
 Route::post('/api/pesanan', [PesananController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('api.pesanan.store');

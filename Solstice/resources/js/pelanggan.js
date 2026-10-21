@@ -18,6 +18,11 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
   syncTrackLastOrderButton();
   const format = (value) => "Rp " + new Intl.NumberFormat("id-ID").format(Number(value || 0));
+  const itemStock = (item) => {
+    const value = item?.stok ?? item?.stock;
+    const stock = Number(value);
+    return value !== null && value !== void 0 && Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : null;
+  };
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const itemId = (item) => String(item.id_menu ?? item.id ?? item.nama_menu);
   const itemName = (item) => item.nama_menu ?? item.name ?? "Menu Solstice";
@@ -112,7 +117,9 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     const shown = products.filter((item) => (category === "all" || categoryKey(item) === category) && `${itemName(item)} ${item.deskripsi || ""}`.toLowerCase().includes(query.toLowerCase()));
     productsEl.innerHTML = shown.length ? shown.map((item) => {
       const id = itemId(item), amount = cart.get(id)?.quantity || 0;
-      return `<article class="product"><div class="product-photo">${picture(item)}</div><div class="product-body"><h2 class="product-title">${escapeHtml(itemName(item))}</h2><div class="product-desc">${escapeHtml(item.deskripsi || item.nama_kategori || "Dibuat segar untuk Anda")}</div><div class="product-bottom"><span class="price">${format(itemPrice(item))}</span><button class="add" data-add="${escapeHtml(id)}" aria-label="Tambah ${escapeHtml(itemName(item))} ke keranjang">${amount ? `+ Tambah (${amount})` : "+ Tambah"}</button></div></div></article>`;
+      const stock = itemStock(item);
+      const stockLabel = stock === null ? "" : stock === 0 ? "Stok habis" : amount >= stock ? `Stok: ${stock} · batas tercapai` : `Stok tersedia: ${stock}`;
+      return `<article class="product"><div class="product-photo">${picture(item)}</div><div class="product-body"><h2 class="product-title">${escapeHtml(itemName(item))}</h2><div class="product-desc">${escapeHtml(item.deskripsi || item.nama_kategori || "Dibuat segar untuk Anda")}</div>${stockLabel ? `<div class="stock-note">${escapeHtml(stockLabel)}</div>` : ""}<div class="product-bottom"><span class="price">${format(itemPrice(item))}</span><button class="add" data-add="${escapeHtml(id)}" aria-label="Tambah ${escapeHtml(itemName(item))} ke keranjang" ${stock === 0 ? "disabled" : ""}>${stock === 0 ? "Stok habis" : amount ? `+ Tambah (${amount})` : "+ Tambah"}</button></div></div></article>`;
     }).join("") : `<div class="empty">${products.length ? "Menu tidak ditemukan. Coba kata kunci lain." : "Menu belum tersedia saat ini."}</div>`;
   }
   function renderCart() {
@@ -217,7 +224,11 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
       if (!response.ok) throw new Error("Tidak dapat memuat menu");
       const data = await response.json();
       products = Array.isArray(data) ? data : data.data || [];
-      renderProducts();
+      for (const line of cart.values()) {
+        const latest = products.find((item) => itemId(item) === itemId(line.item));
+        if (latest) line.item = latest;
+      }
+      renderCart();
     } catch (error) {
       productsEl.innerHTML = '<div class="empty">Menu belum dapat dimuat. Periksa koneksi lalu coba lagi.</div>';
     }
@@ -238,6 +249,11 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
       const item = products.find((product) => itemId(product) === add.dataset.add);
       if (!item) return;
       const line = cart.get(add.dataset.add);
+      const stock = itemStock(item);
+      if (stock !== null && (line?.quantity || 0) >= stock) {
+        toast(`Stok ${itemName(item)} hanya ${stock} item. Jumlah pesanan sudah mencapai stok.`);
+        return;
+      }
       cart.set(add.dataset.add, { item, quantity: (line?.quantity || 0) + 1 });
       renderCart();
     }
@@ -245,7 +261,13 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     if (change) {
       const line = cart.get(change.dataset.qty);
       if (line) {
-        line.quantity += Number(change.dataset.delta);
+        const delta = Number(change.dataset.delta);
+        const stock = itemStock(line.item);
+        if (delta > 0 && stock !== null && line.quantity >= stock) {
+          toast(`Stok ${itemName(line.item)} hanya ${stock} item. Jumlah pesanan sudah mencapai stok.`);
+          return;
+        }
+        line.quantity += delta;
         if (line.quantity <= 0) cart.delete(change.dataset.qty);
         renderCart();
       }
@@ -292,6 +314,15 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
       return;
     }
 
+    const overStock = [...cart.values()].find(({ item, quantity }) => {
+      const stock = itemStock(item);
+      return stock !== null && quantity > stock;
+    });
+    if (overStock) {
+      toast(`Stok ${itemName(overStock.item)} hanya ${itemStock(overStock.item)} item. Kurangi jumlah pesanan.`);
+      return;
+    }
+
     const selectedPayment = payment;
 
     const items = [...cart.values()].map(({ item, quantity }) => ({
@@ -316,12 +347,23 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
         }
       }
 
+      const csrfResponse = await fetch("/csrf-token", {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      const csrfResult = await csrfResponse.json().catch(() => ({}));
+      if (!csrfResponse.ok || !csrfResult.token) {
+        throw new Error("Sesi pemesanan tidak dapat diperbarui. Muat ulang halaman, lalu coba lagi.");
+      }
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      if (csrfMeta) csrfMeta.content = csrfResult.token;
+
       const response = await fetch("/api/pesanan", {
         method: "POST",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+          "X-CSRF-TOKEN": csrfResult.token,
         },
         body: JSON.stringify({
   nama_pelanggan: name,
@@ -335,6 +377,12 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         const validationError = Object.values(result.errors || {}).flat()[0];
+        if (response.status === 422 && String(validationError || "").toLowerCase().includes("stok")) {
+          await loadMenu();
+        }
+        if (response.status === 419) {
+          throw new Error("Sesi pemesanan kedaluwarsa. Muat ulang halaman, lalu coba lagi.");
+        }
         throw new Error(validationError || result.message || "Pesanan gagal disimpan.");
       }
       if (!result.order?.order_id) throw new Error("Server tidak mengirim ID pesanan.");

@@ -330,7 +330,32 @@ class AdminController extends Controller
         }, 'laporan-penjualan.csv', ['Content-Type'=>'text/csv; charset=UTF-8']);
     }
 
-    public function exportPage() { return view('admin.export'); }
+    public function exportPage(Request $request)
+    {
+        $request->validate([
+            'dari' => ['nullable', 'date'],
+            'sampai' => ['nullable', 'date', 'after_or_equal:dari'],
+        ]);
+
+        $start = $request->query('dari', now()->startOfWeek()->toDateString());
+        $end = $request->query('sampai', now()->toDateString());
+
+        $rows = DB::table('pembayaran')
+            ->join('pesanan', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->whereBetween(DB::raw('DATE(pembayaran.tanggal)'), [$start, $end])
+            ->select('pesanan.order_id', 'pesanan.tanggal', 'pembayaran.metode_pembayaran', 'pembayaran.total')
+            ->orderBy('pembayaran.tanggal')
+            ->get();
+
+        $revenue = (float) $rows->sum('total');
+        $transactions = $rows->count();
+        $cups = DB::table('detail_pesanan')
+            ->join('pesanan', 'detail_pesanan.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->whereBetween(DB::raw('DATE(pesanan.tanggal)'), [$start, $end])
+            ->sum('detail_pesanan.jumlah_pesanan');
+
+        return view('admin.export', compact('start', 'end', 'rows', 'revenue', 'transactions', 'cups'));
+    }
 
     public function users() { $columns = array_values(array_diff(Schema::getColumnListing('users'),['password','remember_token'])); return response()->json(DB::table('users')->select($columns)->get()); }
     public function menu()
