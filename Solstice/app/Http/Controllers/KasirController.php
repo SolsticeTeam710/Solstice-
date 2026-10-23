@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class KasirController extends Controller
@@ -196,6 +198,8 @@ public function verify(Request $request, string $orderId)
                 'status' => 'kosong',
             ]);
     });
+
+    Cache::forever('admin.metrics.version', (string) Str::uuid());
 
     return response()->json(['message' => 'Pembayaran diverifikasi.']);
 }

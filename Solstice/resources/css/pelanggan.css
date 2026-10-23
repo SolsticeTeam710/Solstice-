@@ -242,6 +242,13 @@ body {
   font-size: 10px;
   font-weight: 600;
 }
+.stock-note--empty {
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fff1f0;
+  color: #a4262c;
+}
 .product-bottom {
   display: flex;
   align-items: center;
@@ -269,7 +276,9 @@ body {
   background: var(--coffee-dark);
 }
 .add:disabled {
-  opacity: .45;
+  background: #858585;
+  color: #fff;
+  opacity: 1;
   cursor: not-allowed;
 }
 .empty {

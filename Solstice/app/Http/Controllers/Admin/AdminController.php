@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 
@@ -19,20 +21,47 @@ class AdminController extends Controller
     {
         $labels = ['Mon'=>'Sen','Tue'=>'Sel','Wed'=>'Rab','Thu'=>'Kam','Fri'=>'Jum','Sat'=>'Sab','Sun'=>'Min'];
         $firstDay = Carbon::today()->subDays(6);
-        $dailySales = DB::table('pembayaran')->select(DB::raw('DATE(tanggal) as hari'),DB::raw('SUM(total) as total'))
-            ->whereBetween(DB::raw('DATE(tanggal)'),[$firstDay->toDateString(),Carbon::today()->toDateString()])
-            ->groupBy(DB::raw('DATE(tanggal)'))->pluck('total','hari');
+        $today = Carbon::today();
+        $version = Cache::get('admin.metrics.version', '0');
+        $metrics = Cache::remember("admin.dashboard.metrics.{$version}", now()->addSeconds(15), function () use ($firstDay, $today) {
+            $dailySales = DB::table('pembayaran')->select(DB::raw('DATE(tanggal) as hari'),DB::raw('SUM(total) as total'))
+                ->where('tanggal', '>=', $firstDay->copy()->startOfDay())
+                ->where('tanggal', '<', $today->copy()->addDay()->startOfDay())
+                ->groupBy(DB::raw('DATE(tanggal)'))->pluck('total','hari')->all();
+            $menuStats = DB::table('menu')
+                ->selectRaw(
+                    'COUNT(*) AS total, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS active, '
+                    . 'SUM(CASE WHEN COALESCE(stok, 0) <= COALESCE(batas_minimum, 0) THEN 1 ELSE 0 END) AS low_stock',
+                    ['tersedia']
+                )
+                ->first();
+            $userStats = DB::table('users')
+                ->selectRaw(
+                    "COUNT(*) AS total, SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) AS admins, "
+                    . "SUM(CASE WHEN role = 'kasir' THEN 1 ELSE 0 END) AS cashiers"
+                )
+                ->first();
+
+            return [
+                'daily_sales' => $dailySales,
+                'menu_stats' => (array) $menuStats,
+                'user_stats' => (array) $userStats,
+            ];
+        });
+        $dailySales = $metrics['daily_sales'];
         $weekly = [];
-        for ($day = $firstDay->copy(); $day->lte(Carbon::today()); $day->addDay()) {
+        for ($day = $firstDay->copy(); $day->lte($today); $day->addDay()) {
             $weekly[] = [$labels[$day->format('D')], ((float)($dailySales[$day->toDateString()] ?? 0)) / 1000000];
         }
-        $todayRevenue = (float) DB::table('pembayaran')->whereDate('tanggal',Carbon::today())->sum('total');
-        $menuTotal = DB::table('menu')->count();
-        $activeMenus = DB::table('menu')->where('status','tersedia')->count();
-        $userTotal = DB::table('users')->count();
-        $adminTotal = DB::table('users')->where('role','admin')->count();
-        $cashierTotal = DB::table('users')->where('role','kasir')->count();
-        $lowStock = DB::table('menu')->whereRaw('COALESCE(stok, 0) <= COALESCE(batas_minimum, 0)')->count();
+        $todayRevenue = (float) ($dailySales[$today->toDateString()] ?? 0);
+        $menuStats = $metrics['menu_stats'];
+        $userStats = $metrics['user_stats'];
+        $menuTotal = (int) ($menuStats['total'] ?? 0);
+        $activeMenus = (int) ($menuStats['active'] ?? 0);
+        $lowStock = (int) ($menuStats['low_stock'] ?? 0);
+        $userTotal = (int) ($userStats['total'] ?? 0);
+        $adminTotal = (int) ($userStats['admins'] ?? 0);
+        $cashierTotal = (int) ($userStats['cashiers'] ?? 0);
         $stats = [
             ['Total Varian Menu', $menuTotal.' Menu', 'text-brand', $activeMenus.' menu tersedia', 'text-ok', false],
             ['Total Pengguna (Staf)', $userTotal.' User', 'text-brand', $adminTotal.' Admin · '.$cashierTotal.' Kasir', 'text-muted', false],
@@ -97,6 +126,7 @@ class AdminController extends Controller
         ]);
         $data['batas_minimum'] = $data['batas_minimum'] ?? 0;
         DB::table('menu')->insert($data + ['status' => $data['stok'] > 0 ? 'tersedia' : 'habis']);
+        $this->invalidateAdminMetrics();
         return back()->with('success', 'Menu berhasil ditambahkan.');
     }
 
@@ -115,6 +145,7 @@ class AdminController extends Controller
 
         $data['batas_minimum'] = $data['batas_minimum'] ?? 0;
         DB::table('menu')->where('id_menu', $id)->update($data + ['status' => $data['stok'] > 0 ? 'tersedia' : 'habis']);
+        $this->invalidateAdminMetrics();
 
         return back()->with('success', 'Menu berhasil diperbarui.');
     }
@@ -124,6 +155,7 @@ class AdminController extends Controller
             return back()->with('error', 'Menu sudah tercatat di pesanan, jadi tidak dapat dihapus.');
         }
         DB::table('menu')->where('id_menu', $id)->delete();
+        $this->invalidateAdminMetrics();
         return back()->with('success', 'Menu berhasil dihapus.');
     }
 
@@ -138,15 +170,29 @@ class AdminController extends Controller
 
     public function usersPage()
     {
-        $columns = Schema::getColumnListing('users');
-        $users = DB::table('users')->whereIn('role',['admin','kasir'])->orderBy('username')->get()->map(function ($user) use ($columns) {
-            $active = in_array('is_active', $columns)
-                ? (bool) $user->is_active
-                : in_array(mb_strtolower((string) ($user->status ?? 'aktif')), ['aktif', 'active'], true);
-            return ['id'=>$user->id_users, 'nama'=>in_array('name',$columns) && $user->name ? $user->name : $user->username,
-                'username'=>$user->username, 'email'=>in_array('email',$columns) ? ($user->email ?? '') : '',
-                'jabatan'=>ucfirst($user->role), 'role'=>$user->role, 'aktif'=>$active];
-        })->all();
+        // Use the selected user rows to detect optional fields instead of making
+        // a separate database schema query on every page visit.
+        $users = DB::table('users')
+            ->whereIn('role', ['admin', 'kasir'])
+            ->orderBy('username')
+            ->get()
+            ->map(function ($user) {
+                $active = property_exists($user, 'is_active')
+                    ? (bool) $user->is_active
+                    : in_array(mb_strtolower((string) ($user->status ?? 'aktif')), ['aktif', 'active'], true);
+
+                return [
+                    'id' => $user->id_users,
+                    'nama' => property_exists($user, 'name') && $user->name ? $user->name : $user->username,
+                    'username' => $user->username,
+                    'email' => property_exists($user, 'email') ? ($user->email ?? '') : '',
+                    'jabatan' => ucfirst($user->role),
+                    'role' => $user->role,
+                    'aktif' => $active,
+                ];
+            })
+            ->all();
+
         return view('admin.users', compact('users'));
     }
 
@@ -161,6 +207,7 @@ class AdminController extends Controller
         if (Schema::hasColumn('users','status')) $data['status'] = 'aktif';
         if (Schema::hasColumn('users','is_active')) $data['is_active'] = true;
         $this->insertSupportedUserColumns($data);
+        $this->invalidateAdminMetrics();
         return back()->with('success', 'Akun staf berhasil ditambahkan.');
     }
 
@@ -173,6 +220,7 @@ class AdminController extends Controller
         ]);
         if (blank($data['password'] ?? null)) unset($data['password']); else $data['password'] = Hash::make($data['password']);
         $this->updateSupportedUserColumns($id, $data);
+        $this->invalidateAdminMetrics();
         return back()->with('success', 'Akun staf berhasil diperbarui.');
     }
 
@@ -184,6 +232,7 @@ class AdminController extends Controller
         if ($target->role === 'admin' && DB::table('users')->where('role','admin')->count() <= 1) return back()->with('error', 'Tidak dapat menghapus satu-satunya admin.');
         if (Schema::hasTable('pesanan') && DB::table('pesanan')->where('id_users',$id)->exists()) return back()->with('error', 'Akun ini memiliki riwayat pesanan, jadi tidak dapat dihapus. Nonaktifkan akunnya saja.');
         DB::table('users')->where('id_users', $id)->delete();
+        $this->invalidateAdminMetrics();
         return back()->with('success', 'Akun staf berhasil dihapus.');
     }
 
@@ -201,6 +250,7 @@ class AdminController extends Controller
         if (in_array('status',$columns)) $values['status'] = $isActive ? 'nonaktif' : 'aktif';
         if (in_array('updated_at',$columns)) $values['updated_at'] = now();
         DB::table('users')->where('id_users',$id)->update($values);
+        $this->invalidateAdminMetrics();
         return back()->with('success','Status pengguna berhasil diubah.');
     }
 
@@ -264,6 +314,7 @@ class AdminController extends Controller
             'batas_minimum' => $data['stok_minimum'],
             'status' => $data['stok'] > 0 ? 'tersedia' : 'habis',
         ]);
+        $this->invalidateAdminMetrics();
 
         return back()->with('success', 'Stok menu berhasil diperbarui.');
     }
@@ -293,25 +344,63 @@ class AdminController extends Controller
         $request->validate(['dari'=>['nullable','date'],'sampai'=>['nullable','date','after_or_equal:dari']]);
         $start = $request->query('dari', now()->startOfWeek()->toDateString());
         $end = $request->query('sampai', now()->toDateString());
-        $sales = DB::table('pembayaran')->join('pesanan','pembayaran.id_pesanan','=','pesanan.id_pesanan')
-            ->whereBetween(DB::raw('DATE(pembayaran.tanggal)'), [$start,$end]);
-        $revenue = (clone $sales)->sum('pembayaran.total');
-        $transactions = (clone $sales)->distinct('pesanan.id_pesanan')->count('pesanan.id_pesanan');
+        $startAt = Carbon::parse($start)->startOfDay();
+        $endExclusive = Carbon::parse($end)->addDay()->startOfDay();
+
+        $version = Cache::get('admin.metrics.version', '0');
+        $cacheKey = 'admin.reports.' . $version . '.' . md5($start . '|' . $end);
+        $report = Cache::remember($cacheKey, now()->addSeconds(30), function () use ($startAt, $endExclusive) {
+            $summary = DB::table('pembayaran')
+                ->join('pesanan', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+                ->where('pembayaran.tanggal', '>=', $startAt)
+                ->where('pembayaran.tanggal', '<', $endExclusive)
+                ->selectRaw(
+                    'COALESCE(SUM(pembayaran.total), 0) AS revenue, COUNT(DISTINCT pesanan.id_pesanan) AS transactions'
+                )
+                ->selectSub(function ($query) use ($startAt, $endExclusive) {
+                    $query->from('detail_pesanan')
+                        ->join('pesanan as orders_for_cups', 'detail_pesanan.id_pesanan', '=', 'orders_for_cups.id_pesanan')
+                        ->where('orders_for_cups.tanggal', '>=', $startAt)
+                        ->where('orders_for_cups.tanggal', '<', $endExclusive)
+                        ->selectRaw('COALESCE(SUM(detail_pesanan.jumlah_pesanan), 0)');
+                }, 'cups')
+                ->first();
+            $top = DB::table('detail_pesanan')->join('pesanan','detail_pesanan.id_pesanan','=','pesanan.id_pesanan')
+                ->join('menu','detail_pesanan.id_menu','=','menu.id_menu')->join('kategori','menu.id_kategori','=','kategori.id_kategori')
+                ->where('pesanan.tanggal', '>=', $startAt)
+                ->where('pesanan.tanggal', '<', $endExclusive)
+                ->select('menu.nama_menu','kategori.nama_kategori',DB::raw('SUM(detail_pesanan.jumlah_pesanan) as terjual'),DB::raw('SUM(detail_pesanan.subtotal) as omzet'))
+                ->groupBy('menu.nama_menu','kategori.nama_kategori')->orderByDesc('terjual')->limit(5)->get()
+                ->map(fn($row)=>['nama'=>$row->nama_menu,'kategori'=>$row->nama_kategori,'terjual'=>$row->terjual,'omzet'=>$row->omzet])->all();
+            $daily = DB::table('pembayaran')->select(DB::raw('DATE(tanggal) as hari'),DB::raw('SUM(total) as total'))
+                ->where('tanggal', '>=', $startAt)
+                ->where('tanggal', '<', $endExclusive)
+                ->groupBy(DB::raw('DATE(tanggal)'))->orderBy('hari')->get()
+                ->map(fn($row)=>[date('D',strtotime($row->hari)),(float)$row->total])->all();
+
+            return [
+                'revenue' => (float) ($summary->revenue ?? 0),
+                'transactions' => (int) ($summary->transactions ?? 0),
+                'cups' => (int) ($summary->cups ?? 0),
+                'top' => $top,
+                'weekly' => $daily,
+            ];
+        });
+
+        $revenue = $report['revenue'];
+        $transactions = $report['transactions'];
+        $cups = $report['cups'];
+        $top = $report['top'];
+        $weekly = $report['weekly'];
         $dailyAverage = $transactions ? $revenue / max(1, Carbon::parse($start)->diffInDays(Carbon::parse($end)) + 1) : 0;
-        $cups = DB::table('detail_pesanan')->join('pesanan','detail_pesanan.id_pesanan','=','pesanan.id_pesanan')
-            ->whereBetween(DB::raw('DATE(pesanan.tanggal)'),[$start,$end])->sum('detail_pesanan.jumlah_pesanan');
-        $top = DB::table('detail_pesanan')->join('pesanan','detail_pesanan.id_pesanan','=','pesanan.id_pesanan')
-            ->join('menu','detail_pesanan.id_menu','=','menu.id_menu')->join('kategori','menu.id_kategori','=','kategori.id_kategori')
-            ->whereBetween(DB::raw('DATE(pesanan.tanggal)'),[$start,$end])
-            ->select('menu.nama_menu','kategori.nama_kategori',DB::raw('SUM(detail_pesanan.jumlah_pesanan) as terjual'),DB::raw('SUM(detail_pesanan.subtotal) as omzet'))
-            ->groupBy('menu.nama_menu','kategori.nama_kategori')->orderByDesc('terjual')->limit(5)->get()
-            ->map(fn($row)=>['nama'=>$row->nama_menu,'kategori'=>$row->nama_kategori,'terjual'=>$row->terjual,'omzet'=>$row->omzet])->all();
-        $daily = DB::table('pembayaran')->select(DB::raw('DATE(tanggal) as hari'),DB::raw('SUM(total) as total'))
-            ->whereBetween(DB::raw('DATE(tanggal)'),[$start,$end])->groupBy(DB::raw('DATE(tanggal)'))->orderBy('hari')->get();
-        $weekly = $daily->map(fn($row)=>[date('D',strtotime($row->hari)),(float)$row->total])->all();
         if (! $weekly) $weekly = [['- ',0]];
         $popular = $top;
         return view('admin.reports', compact('weekly','popular','revenue','transactions','cups','start','end','dailyAverage'));
+    }
+
+    private function invalidateAdminMetrics(): void
+    {
+        Cache::forever('admin.metrics.version', (string) Str::uuid());
     }
 
     public function downloadReport(Request $request)
@@ -380,9 +469,17 @@ class AdminController extends Controller
             'Makanan' => ['makanan'],
         ];
 
+        // One database round trip is enough to check all defaults; previously
+        // this method queried once per category on every menu page visit.
+        $existing = DB::table('kategori')
+            ->pluck('nama_kategori')
+            ->map(fn ($name) => mb_strtolower(trim((string) $name)))
+            ->all();
+
         foreach ($this->defaultCategories as $name) {
-            if (! DB::table('kategori')->whereIn(DB::raw('LOWER(nama_kategori)'), $aliases[$name])->exists()) {
+            if (! array_intersect($aliases[$name], $existing)) {
                 DB::table('kategori')->insert(['nama_kategori' => $name]);
+                $existing[] = mb_strtolower($name);
             }
         }
     }

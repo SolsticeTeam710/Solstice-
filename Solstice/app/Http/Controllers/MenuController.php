@@ -6,12 +6,11 @@ use Illuminate\Support\Facades\DB;
 
 class MenuController extends Controller
 {
-    /** Return the available catalog for the public QR menu. */
+    /** Return the customer catalog, including sold-out menu items. */
     public function index()
     {
         $menus = DB::table('menu')
             ->leftJoin('kategori', 'menu.id_kategori', '=', 'kategori.id_kategori')
-            ->where('menu.status', 'tersedia')
             ->select('menu.*', 'kategori.nama_kategori')
             ->orderBy('menu.nama_menu')
             ->get();

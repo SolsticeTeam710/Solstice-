@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -109,6 +110,8 @@ DB::table('meja')
             'status' => 'pending',
         ];
     });
+
+    Cache::forever('admin.metrics.version', (string) Str::uuid());
 
     return response()->json([
         'message' => 'Pesanan berhasil dibuat.',

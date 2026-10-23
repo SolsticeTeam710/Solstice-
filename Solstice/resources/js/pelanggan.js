@@ -118,8 +118,9 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     productsEl.innerHTML = shown.length ? shown.map((item) => {
       const id = itemId(item), amount = cart.get(id)?.quantity || 0;
       const stock = itemStock(item);
-      const stockLabel = stock === null ? "" : stock === 0 ? "Stok habis" : amount >= stock ? `Stok: ${stock} · batas tercapai` : `Stok tersedia: ${stock}`;
-      return `<article class="product"><div class="product-photo">${picture(item)}</div><div class="product-body"><h2 class="product-title">${escapeHtml(itemName(item))}</h2><div class="product-desc">${escapeHtml(item.deskripsi || item.nama_kategori || "Dibuat segar untuk Anda")}</div>${stockLabel ? `<div class="stock-note">${escapeHtml(stockLabel)}</div>` : ""}<div class="product-bottom"><span class="price">${format(itemPrice(item))}</span><button class="add" data-add="${escapeHtml(id)}" aria-label="Tambah ${escapeHtml(itemName(item))} ke keranjang" ${stock === 0 ? "disabled" : ""}>${stock === 0 ? "Stok habis" : amount ? `+ Tambah (${amount})` : "+ Tambah"}</button></div></div></article>`;
+      const outOfStock = stock === 0;
+      const stockLabel = stock === null ? "" : outOfStock ? "Menu habis" : amount >= stock ? `Stok: ${stock} · batas tercapai` : `Stok tersedia: ${stock}`;
+      return `<article class="product"><div class="product-photo">${picture(item)}</div><div class="product-body"><h2 class="product-title">${escapeHtml(itemName(item))}</h2><div class="product-desc">${escapeHtml(item.deskripsi || item.nama_kategori || "Dibuat segar untuk Anda")}</div>${stockLabel ? `<div class="stock-note${outOfStock ? " stock-note--empty" : ""}" role="status">${escapeHtml(stockLabel)}</div>` : ""}<div class="product-bottom"><span class="price">${format(itemPrice(item))}</span><button class="add" data-add="${escapeHtml(id)}" aria-label="Tambah ${escapeHtml(itemName(item))} ke keranjang" ${outOfStock ? 'disabled aria-disabled="true"' : ""}>${outOfStock ? "Habis" : amount ? `+ Tambah (${amount})` : "+ Tambah"}</button></div></div></article>`;
     }).join("") : `<div class="empty">${products.length ? "Menu tidak ditemukan. Coba kata kunci lain." : "Menu belum tersedia saat ini."}</div>`;
   }
   function renderCart() {
