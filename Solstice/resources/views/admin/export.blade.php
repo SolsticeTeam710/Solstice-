@@ -27,6 +27,7 @@
         <div class="mb-6 border-b border-line pb-4 text-center">
             <img src="/images/solstice-logo.jpeg" alt="Logo Solstice Coffee" class="mx-auto mb-3 h-20 w-20 object-contain" width="80" height="80">
             <p class="text-xs font-bold uppercase tracking-widest text-muted">Solstice Coffee</p>
+            <p class="mt-1 text-xs text-muted">Jalan Raya Kopo No. 362B, Bojongloa Kaler, Kopo, Bandung, Jawa Barat, 40233</p>
             <h2 class="mt-1 font-display text-2xl font-bold text-brand">Laporan Penjualan</h2>
             <p class="mt-1 text-sm text-muted">Periode {{ \Carbon\Carbon::parse($start)->format('d/m/Y') }} – {{ \Carbon\Carbon::parse($end)->format('d/m/Y') }}</p>
             <p class="mt-1 text-xs text-muted">Dicetak pada {{ now()->format('d/m/Y H:i') }}</p>
