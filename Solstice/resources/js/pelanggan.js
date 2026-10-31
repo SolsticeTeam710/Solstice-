@@ -101,8 +101,14 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     void finishQrisScan(false);
   });
   const picture = (item) => {
-    const name = itemName(item).trim().toLowerCase();
-    const mapped = name.includes("arak") ? "/images/menu/Arak.webp" : name.includes("matcha latte") ? "/images/menu/Matcha%20Latte.webp" : null;
+    const name = itemName(item).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const mapped = name.includes("arak") ? "/images/menu/Arak.webp"
+      : name.includes("matcha latte") ? "/images/menu/Matcha%20Latte.webp"
+      : name.includes("air dingin") ? "/images/menu/air-dingin.jpg"
+      : name.includes("ayam goreng") ? "/images/menu/ayam-goreng.jpg"
+      : name.includes("caffe latte") || name.includes("cafe latte") ? "/images/menu/caffe-latte.jpg"
+      : name.includes("kwetiaw") || name.includes("kwetiau") ? "/images/menu/mie-kwetiaw.jpg"
+      : null;
     const photo = item.foto;
     const fallback = categoryKey(item) === "coffee" ? "\u2615" : categoryKey(item) === "makanan" ? "\u{1F950}" : "\u{1F375}";
     let url = mapped;
