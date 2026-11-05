@@ -84,6 +84,7 @@ Route::middleware(['auth', 'role:kasir,admin'])
     ->group(function () {
         Route::get('/dashboard', [KasirController::class, 'dashboard']);
         Route::get('/orders', [KasirController::class, 'orders']);
+        Route::get('/orders/search', [KasirController::class, 'searchByCustomer']);
         Route::get('/orders/{orderId}', [KasirController::class, 'search']);
         Route::put('/orders/{orderId}/verify', [KasirController::class, 'verify']);
     });

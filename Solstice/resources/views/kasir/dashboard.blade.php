@@ -145,7 +145,7 @@
         <nav class="nav" aria-label="Navigasi kasir">
             <button class="active" data-view="dashboard" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg><span class="nav-label">Dashboard</span></button>
             <button data-view="orders"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span class="nav-label">Daftar Pesanan</span></button>
-            <button data-view="search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="nav-label">Cari Order</span></button>
+            <button data-view="search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="nav-label">Cari Nama Pelanggan</span></button>
             <button data-view="verify"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="nav-label">Verifikasi Bayar</span></button>
             <button data-view="receipt"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span class="nav-label">Cetak Struk</span></button>
         </nav>
@@ -162,25 +162,25 @@
                     <article class="stat"><div class="stat-label">Pesanan Selesai</div><div class="stat-number" id="stat-done">— Order</div><div class="stat-note good">Status selesai</div></article>
                     <article class="stat highlight"><div class="stat-label">Pendapatan Pesanan Selesai</div><div class="stat-number" id="stat-income">—</div><div class="stat-note">Akumulasi total pesanan berstatus selesai</div></article>
                 </div>
-                <section class="card"><div class="card-head"><div><h2>Aktivitas Pesanan Terbaru</h2><p class="card-subtitle">Pesanan terbaru yang masuk ke sistem</p></div><button class="btn" data-go="orders">Lihat semua pesanan →</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Order ID</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="recent-orders"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div></section>
+                <section class="card"><div class="card-head"><div><h2>Aktivitas Pesanan Terbaru</h2><p class="card-subtitle">Pesanan terbaru yang masuk ke sistem</p></div><button class="btn" data-go="orders">Lihat semua pesanan →</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Nama Pelanggan</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="recent-orders"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div></section>
             </section>
 
             <section class="view" id="view-orders">
-                <section class="card"><div class="card-head"><div><h2>Daftar Pesanan</h2><p class="card-subtitle">Pantau status pesanan yang masuk.</p></div><button class="btn" data-refresh>↻ Segarkan</button></div><div class="filter-row" id="status-filters"><button class="filter-chip active" data-status="all">Semua</button><button class="filter-chip" data-status="pending">Menunggu konfirmasi kasir</button><button class="filter-chip" data-status="done">Selesai</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Order ID</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orders-table"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div><div id="orders-empty" class="empty" hidden><div class="empty-icon">☕</div>Belum ada pesanan.</div><div class="orders-pagination" id="orders-pagination" hidden><span class="orders-pagination-summary" id="orders-page-summary"></span><div class="actions"><button class="btn" data-order-page="-1">← Sebelumnya</button><button class="btn" data-order-page="1">Berikutnya →</button></div></div></section>
+                <section class="card"><div class="card-head"><div><h2>Daftar Pesanan</h2><p class="card-subtitle">Pantau status pesanan yang masuk.</p></div><button class="btn" data-refresh>↻ Segarkan</button></div><div class="filter-row" id="status-filters"><button class="filter-chip active" data-status="all">Semua</button><button class="filter-chip" data-status="pending">Menunggu konfirmasi kasir</button><button class="filter-chip" data-status="done">Selesai</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Nama Pelanggan</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orders-table"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div><div id="orders-empty" class="empty" hidden><div class="empty-icon">☕</div>Belum ada pesanan.</div><div class="orders-pagination" id="orders-pagination" hidden><span class="orders-pagination-summary" id="orders-page-summary"></span><div class="actions"><button class="btn" data-order-page="-1">← Sebelumnya</button><button class="btn" data-order-page="1">Berikutnya →</button></div></div></section>
             </section>
 
             <section class="view" id="view-search">
-                <section class="card"><div class="card-head"><div><h2>Cari Order</h2><p class="card-subtitle">Masukkan Order ID untuk menemukan pesanan.</p></div></div><form class="toolbar" id="search-form"><input class="input search-input" id="search-input" placeholder="Contoh: ORD-20261005-001" autocomplete="off"><button class="btn primary">⌕ Cari pesanan</button></form><div id="search-result"></div></section>
+                <section class="card"><div class="card-head"><div><h2>Cari Nama Pelanggan</h2><p class="card-subtitle">Masukkan nama pelanggan untuk menemukan pesanan.</p></div></div><form class="toolbar" id="search-form"><input class="input search-input" id="search-input" placeholder="Masukkan nama pelanggan" autocomplete="off"><button class="btn primary">⌕ Cari pelanggan</button></form><div id="search-result"></div></section>
             </section>
 
             <section class="view" id="view-verify">
                 <p class="page-message">Periksa detail pesanan, lalu konfirmasi pembayaran yang sudah diterima.</p>
-                <section class="card"><div class="card-head"><div><h2>Temukan Pesanan</h2><p class="card-subtitle">Verifikasi status pembayaran melalui Order ID.</p></div></div><form class="toolbar" id="verify-search-form"><input class="input search-input" id="verify-input" placeholder="Masukkan Order ID" autocomplete="off"><button class="btn primary">Cari pesanan</button></form></section>
+                <section class="card"><div class="card-head"><div><h2>Verifikasi Bayar</h2><p class="card-subtitle">Cari nama pelanggan untuk menemukan pesanan yang perlu diverifikasi.</p></div></div><form class="toolbar" id="verify-search-form"><input class="input search-input" id="verify-input" placeholder="Masukkan nama pelanggan" autocomplete="off"><button class="btn primary">Cari pelanggan</button></form></section>
                 <div id="verify-result"></div>
             </section>
 
             <section class="view" id="view-receipt">
-                <section class="card no-print"><div class="card-head"><div><h2>Cetak Struk</h2><p class="card-subtitle">Cari pesanan untuk menampilkan struk pembelian.</p></div></div><form class="toolbar" id="receipt-search-form"><input class="input search-input" id="receipt-input" placeholder="Masukkan Order ID" autocomplete="off"><button class="btn primary">Tampilkan struk</button></form></section>
+                <section class="card no-print"><div class="card-head"><div><h2>Cetak Struk</h2><p class="card-subtitle">Cari nama pelanggan untuk menampilkan struk pembelian.</p></div></div><form class="toolbar" id="receipt-search-form"><input class="input search-input" id="receipt-input" placeholder="Masukkan nama pelanggan" autocomplete="off"><button class="btn primary">Cari pelanggan</button></form></section>
                 <div id="receipt-result" class="receipt"><p class="helper">Cari pesanan untuk menampilkan struk.</p></div>
                 <div class="actions no-print" style="justify-content:center;margin-top:14px"><button class="btn primary" id="print-receipt">Cetak Struk Sekarang</button></div>
             </section>
@@ -191,7 +191,7 @@
 (() => {
     const api = '/api/kasir';
     const receiptLogo = @json('/images/solstice-logo.jpeg');
-    const titles = {dashboard:'Dashboard',orders:'Daftar Pesanan',search:'Cari Order',verify:'Verifikasi Bayar',receipt:'Cetak Struk'};
+    const titles = {dashboard:'Dashboard',orders:'Daftar Pesanan',search:'Cari Nama Pelanggan',verify:'Verifikasi Bayar',receipt:'Cetak Struk'};
     let orders = [], activeFilter = 'all', selectedOrder = null;
     let orderPage = 1, orderLastPage = 1, orderTotal = 0, orderRequestId = 0;
     const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -230,7 +230,7 @@
 
     function notify(message,type='success'){const node=document.getElementById('feedback');node.textContent=message;node.className=`feedback show ${type}`;window.clearTimeout(notify.timer);notify.timer=window.setTimeout(()=>node.className='feedback',4500)}
     function switchView(name){document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id===`view-${name}`));document.querySelectorAll('.nav button').forEach(el=>el.classList.toggle('active',el.dataset.view===name));document.getElementById('page-title').textContent=titles[name];if(name==='orders')renderOrders()}
-    function row(order,index){const id=get(order,'order_id','id_pesanan')||'—';const amount=get(order,'total_harga','total')||0;const status=get(order,'status','status_pesanan')||'pending';return `<tr><td data-label="No.">${index+1}</td><td class="order-id" data-label="Order ID">${esc(id)}</td><td data-label="Tanggal">${date(get(order,'tanggal','created_at'))}</td><td class="amount" data-label="Total">${money(amount)}</td><td data-label="Status">${badge(status)}</td><td data-label="Aksi"><button class="btn" data-detail="${esc(id)}">Detail</button></td></tr>`}
+    function row(order,index){const id=get(order,'order_id','id_pesanan')||'—';const customer=get(order,'nama_pelanggan','nama','customer_name')||'—';const amount=get(order,'total_harga','total')||0;const status=get(order,'status','status_pesanan')||'pending';return `<tr><td data-label="No.">${index+1}</td><td class="order-id" data-label="Nama Pelanggan">${esc(customer)}</td><td data-label="Tanggal">${date(get(order,'tanggal','created_at'))}</td><td class="amount" data-label="Total">${money(amount)}</td><td data-label="Status">${badge(status)}</td><td data-label="Aksi"><button class="btn" data-detail="${esc(id)}">Detail</button></td></tr>`}
     function renderOrders(){
         const table=document.getElementById('orders-table');
         const start=orderTotal?(orderPage-1)*25:0;
@@ -325,7 +325,16 @@
             '</article>' + action + '</section>';
     }
 
-    async function findOrder(id){if(!id.trim())throw new Error('Masukkan Order ID terlebih dahulu.');return request(`${api}/orders/${encodeURIComponent(id.trim())}`)}
+    async function findOrder(id){if(!id.trim())throw new Error('Pesanan tidak ditemukan.');return request(`${api}/orders/${encodeURIComponent(id.trim())}`)}
+    async function findOrdersByCustomer(name){if(!name.trim())throw new Error('Masukkan nama pelanggan terlebih dahulu.');return request(`${api}/orders/search?nama=${encodeURIComponent(name.trim())}`)}
+    function customerOrderMatches(orders,purpose){
+        if(!Array.isArray(orders)||!orders.length)return '<div class="empty">Pesanan tidak ditemukan.</div>';
+        const actionLabel=purpose==='receipt'?'Tampilkan struk':purpose==='verify'?'Pilih pesanan':'Lihat detail';
+        return '<div class="grid gap-3">'+orders.map(order=>{
+            const id=get(order,'order_id','id_pesanan')||'';
+            return '<article class="card"><div class="card-head"><div><h2>'+esc(get(order,'nama_pelanggan')||'Pelanggan')+'</h2><p class="card-subtitle">Order '+esc(id)+' · '+date(get(order,'tanggal','created_at'))+'</p></div>'+badge(get(order,'status','status_pesanan'))+'</div><div class="receipt-row"><span>Total pesanan</span><strong>'+money(get(order,'total_harga','total'))+'</strong></div><button class="btn primary" data-customer-order="'+esc(id)+'" data-customer-purpose="'+purpose+'">'+actionLabel+'</button></article>';
+        }).join('')+'</div>';
+    }
     function receipt(order) {
         const id = get(order, 'order_id', 'id_pesanan') || '—';
         const items = Array.isArray(order.items) ? order.items : [];
@@ -414,6 +423,23 @@
             }
         }
 
+        const customerOrder = event.target.closest('[data-customer-order]');
+        if (customerOrder) {
+            try {
+                const order = await findOrder(customerOrder.dataset.customerOrder);
+                const purpose = customerOrder.dataset.customerPurpose;
+                if (purpose === 'receipt') {
+                    selectedOrder = order;
+                    document.getElementById('receipt-result').innerHTML = receipt(order);
+                } else {
+                    const target = purpose === 'verify' ? 'verify-result' : 'search-result';
+                    document.getElementById(target).innerHTML = orderDetail(order);
+                }
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
         const verify = event.target.closest('[data-verify]');
         if (verify) {
             try {
@@ -465,9 +491,9 @@
                 : `Kembalian: ${money(amount - total)}.`;
     });
 
-    document.getElementById('search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('search-result');box.innerHTML='<div class="loading">Mencari pesanan…</div>';try{const order=await findOrder(document.getElementById('search-input').value);box.innerHTML=orderDetail(order)}catch(error){box.innerHTML=`<div class="empty">${esc(error.message)}</div>`}});
-    document.getElementById('verify-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('verify-result');box.innerHTML='<div class="loading">Mencari pesanan…</div>';try{box.innerHTML=orderDetail(await findOrder(document.getElementById('verify-input').value))}catch(error){box.innerHTML=`<div class="card empty">${esc(error.message)}</div>`}});
-    document.getElementById('receipt-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('receipt-result');box.innerHTML='<div class="loading">Memuat struk…</div>';try{const order=await findOrder(document.getElementById('receipt-input').value);selectedOrder=order;box.innerHTML=receipt(order)}catch(error){box.innerHTML=`<p class="helper">${esc(error.message)}</p>`}});
+    document.getElementById('search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('search-result');box.innerHTML='<div class="loading">Mencari nama pelanggan…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('search-input').value),'search')}catch(error){box.innerHTML=`<div class="empty">${esc(error.message)}</div>`}});
+    document.getElementById('verify-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('verify-result');box.innerHTML='<div class="loading">Mencari pesanan pelanggan…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('verify-input').value),'verify')}catch(error){box.innerHTML=`<div class="card empty">${esc(error.message)}</div>`}});
+    document.getElementById('receipt-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('receipt-result');box.innerHTML='<div class="loading">Mencari pesanan pelanggan…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('receipt-input').value),'receipt')}catch(error){box.innerHTML=`<p class="helper">${esc(error.message)}</p>`}});
     loadData();
 })();
 </script>

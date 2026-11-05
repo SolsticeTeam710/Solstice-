@@ -74,7 +74,53 @@ class KasirController extends Controller
         ]);
     }
 
-    // Cari pesanan berdasarkan Order ID
+    // Cari pesanan berdasarkan nama pelanggan.
+    public function searchByCustomer(Request $request)
+    {
+        $data = $request->validate([
+            'nama' => ['required', 'string', 'min:2', 'max:150'],
+        ]);
+
+        $name = mb_strtolower(trim($data['nama']));
+        $orders = DB::table('pesanan')
+            ->leftJoin('meja', 'meja.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->leftJoin('pembayaran', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->select(
+                'pesanan.*',
+                'meja.nomor_meja',
+                'pembayaran.bayar as uang_dibayar',
+                'pembayaran.kembalian'
+            )
+            ->whereRaw('LOWER(pesanan.nama_pelanggan) LIKE ?', ['%'.$name.'%'])
+            ->orderByDesc('pesanan.tanggal')
+            ->limit(25)
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return response()->json(['message' => 'Pesanan dengan nama pelanggan tersebut tidak ditemukan.'], 404);
+        }
+
+        $orders->each(function ($order) {
+            $items = DB::table('detail_pesanan')
+                ->join('menu', 'menu.id_menu', '=', 'detail_pesanan.id_menu')
+                ->where('detail_pesanan.id_pesanan', $order->id_pesanan)
+                ->select(
+                    'menu.nama_menu',
+                    'detail_pesanan.jumlah_pesanan',
+                    'detail_pesanan.harga_satuan',
+                    'detail_pesanan.subtotal'
+                )
+                ->get();
+
+            $order->items = $items;
+            $order->subtotal = (float) $items->sum('subtotal');
+            $order->pajak = max(0, round((float) $order->total_harga - $order->subtotal, 2));
+        });
+
+        return response()->json($orders);
+    }
+
+    // Cari satu pesanan berdasarkan Order ID untuk detail internal.
     public function search(string $orderId)
 {
     $pesanan = DB::table('pesanan')
