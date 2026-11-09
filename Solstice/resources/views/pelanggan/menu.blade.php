@@ -9,7 +9,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    @vite(['resources/css/pelanggan.css', 'resources/js/pelanggan.js'])
+
+    <script
+    src="{{ config('midtrans.is_production')
+        ? 'https://app.midtrans.com/snap/snap.js'
+        : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
+    data-client-key="{{ config('midtrans.client_key') }}">
+</script>
+
+@vite(['resources/css/pelanggan.css', 'resources/js/pelanggan.js'])
 </head>
 <body>
     <div class="app">

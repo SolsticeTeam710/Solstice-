@@ -346,13 +346,6 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     button.disabled = true;
 
     try {
-      if (selectedPayment === "QRIS") {
-        const scanned = await scanQris();
-        if (!scanned) {
-          toast("Scan QRIS dibatalkan. Pesanan belum dikirim.");
-          return;
-        }
-      }
 
       const csrfResponse = await fetch("/csrf-token", {
         headers: { Accept: "application/json" },
@@ -405,13 +398,29 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
       document.getElementById("success-cash-note").hidden = selectedPayment === "QRIS";
       document.getElementById("success-qris-note").hidden = selectedPayment !== "QRIS";
 
-      cart.clear();
-      renderCart();
-      showPage("success");
+    cart.clear();
+    renderCart();
+    showPage("success");
+
+
+if (selectedPayment === "QRIS") {
+if (!result.snap_token || !window.snap) {
+    throw new Error("Pembayaran QRIS belum dapat dibuka. Coba lagi.");
+}
+
+window.snap.pay(result.snap_token, {
+    onSuccess: () => toast("Pembayaran berhasil. Memperbarui status pesanan..."),
+    onPending: () => toast("Pembayaran menunggu diselesaikan."),
+    onError: () => toast("Pembayaran gagal. Coba lagi."),
+    onClose: () => toast("Halaman pembayaran ditutup."),
+});
+
+return;
+}
     } catch (error) {
-      toast(error.message || "Pesanan gagal dikirim. Coba lagi.");
+    toast(error.message || "Pesanan gagal dikirim. Coba lagi.");
     } finally {
-      button.disabled = false;
+    button.disabled = false;
     }
   });
   document.querySelectorAll("[data-category]").forEach((button) => button.setAttribute("aria-pressed", button.classList.contains("active")));

@@ -7,10 +7,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Services\MidtransService;
 
 class PesananController extends Controller
 {
-public function store(Request $request)
+public function store(Request $request, MidtransService $midtrans)
 {
     $data = $request->validate([
         'nama_pelanggan' => ['required', 'string', 'max:100'],
@@ -113,9 +114,19 @@ DB::table('meja')
 
     Cache::forever('admin.metrics.version', (string) Str::uuid());
 
+$snapToken = null;
+
+if ($data['metode_pembayaran'] === 'QRIS') {
+    $snapToken = $midtrans->createSnapToken(
+    (string) $order['order_id'],
+    (int) round($order['total_harga'])
+    );
+}
+
     return response()->json([
         'message' => 'Pesanan berhasil dibuat.',
         'order' => $order,
+        'snap_token' => $snapToken,
     ], 201);
 }
 
