@@ -294,15 +294,19 @@
         ).join('') : '<tr><td colspan="4" class="empty">Rincian produk tidak tersedia.</td></tr>';
         const paidMarkup = isPending && method === 'CASH'
             ? '<input class="input cash-input" type="number" min="0" step="1" inputmode="numeric" data-cash-amount data-total="' + total + '" placeholder="Masukkan uang yang diterima">'
-            : (isPending ? 'Menunggu verifikasi QRIS' : money(get(order, 'uang_dibayar') ?? total));
+            : (method === 'QRIS' ? 'QRIS Demo — tidak ada uang nyata' : money(get(order, 'uang_dibayar') ?? total));
         const change = isPending ? 0 : Number(get(order, 'kembalian') || 0);
 
         let action = '';
 
         if (stage === 'pending') {
-            action = '<article class="card"><h2>Verifikasi Bayar</h2><p class="helper">Pastikan pembayaran sudah diterima sebelum dikonfirmasi.</p><div class="divider"></div><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Bayar</button></article>';
+            action = method === 'QRIS'
+                ? '<article class="card"><h2>Selesaikan Demo QRIS</h2><p class="helper">QR hanya mensimulasikan pemindaian. Tidak ada pembayaran uang nyata; tombol ini hanya menyelesaikan demo pesanan.</p><div class="divider"></div><button class="btn primary" data-verify="' + esc(id) + '">Selesaikan Demo</button></article>'
+                : '<article class="card"><h2>Verifikasi Bayar</h2><p class="helper">Pastikan pembayaran sudah diterima sebelum dikonfirmasi.</p><div class="divider"></div><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Bayar</button></article>';
         } else if (stage === 'done') {
-            action = '<article class="card"><h2>Pembayaran terkonfirmasi</h2><p class="helper">Pesanan sudah selesai.</p></article>';
+            action = method === 'QRIS'
+                ? '<article class="card"><h2>Demo QRIS selesai</h2><p class="helper">Pesanan demo selesai. Tidak ada dana yang dicatat sebagai pembayaran.</p></article>'
+                : '<article class="card"><h2>Pembayaran terkonfirmasi</h2><p class="helper">Pesanan sudah selesai.</p></article>';
         } else {
             action = '<article class="card"><h2>Status pesanan lama</h2><p class="helper">Silakan tanyakan kepada kasir untuk memastikan status pesanan ini.</p></article>';
         }
@@ -315,7 +319,7 @@
             '<dt>No. meja</dt><dd>' + esc(get(order, 'nomor_meja', 'meja') || '—') + '</dd>' +
             '<dt>Catatan</dt><dd>' + esc(get(order, 'catatan') || '—') + '</dd></dl>' +
             '<div class="divider"></div><h3 class="card-subtitle">Rincian produk</h3><div class="table-wrap"><table class="order-items"><thead><tr><th>Nama produk</th><th>Jumlah</th><th>Harga satuan</th><th>Subtotal</th></tr></thead><tbody>' + itemRows + '</tbody></table></div>' +
-            '<div class="divider"></div><dl class="detail-list"><dt>Metode pembayaran</dt><dd>' + esc(method) + '</dd>' +
+            '<div class="divider"></div><dl class="detail-list"><dt>Metode pembayaran</dt><dd>' + esc(method === 'QRIS' ? 'QRIS (DEMO)' : method) + '</dd>' +
             '<dt>Subtotal</dt><dd>' + money(subtotal) + '</dd>' +
             '<dt>Pajak (PB1 10%)</dt><dd>' + money(tax) + '</dd>' +
             '<dt>Uang diterima</dt><dd>' + paidMarkup + '</dd>' +
@@ -341,6 +345,8 @@
         const subtotal = Number(get(order, 'subtotal') ?? items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0));
         const total = Number(get(order, 'total_harga', 'total') || 0);
         const tax = Number(get(order, 'pajak') ?? Math.max(0, total - subtotal));
+        const method = String(get(order, 'metode_pembayaran') || '—').toUpperCase();
+        const isDemoQris = method === 'QRIS';
         const itemRows = items.length
             ? items.map(item => `<div class="receipt-product">
                 <strong>${esc(item.nama_menu || 'Menu')}</strong>
@@ -353,13 +359,13 @@
             <div class="receipt-row"><span>Order ID</span><strong>${esc(id)}</strong></div>
             <div class="receipt-row"><span>Waktu pesan</span><span>${date(get(order, 'tanggal', 'created_at'))}</span></div>
             <div class="receipt-row"><span>Pelanggan</span><span>${esc(get(order, 'nama_pelanggan', 'nama', 'customer_name') || '—')}</span></div>
-            <div class="receipt-row"><span>Metode bayar</span><span>${esc(get(order, 'metode_pembayaran') || '—')}</span></div>
+            <div class="receipt-row"><span>Metode bayar</span><span>${isDemoQris ? 'QRIS (DEMO)' : esc(method)}</span></div>
             <hr><strong>Rincian produk</strong>${itemRows}
             <hr><div class="receipt-row"><span>Catatan</span><span>${esc(get(order, 'catatan') || '—')}</span></div>
             <div class="receipt-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
             <div class="receipt-row"><span>Pajak</span><span>${money(tax)}</span></div>
             <div class="receipt-row receipt-total"><span>Total pembayaran</span><span>${money(total)}</span></div>
-            <div class="receipt-row"><span>Uang diterima</span><span>${money(get(order, 'uang_dibayar') ?? total)}</span></div>
+            <div class="receipt-row"><span>${isDemoQris ? 'Pembayaran' : 'Uang diterima'}</span><span>${isDemoQris ? 'Tidak ada transaksi nyata' : money(get(order, 'uang_dibayar') ?? total)}</span></div>
             <div class="receipt-row"><span>Kembalian</span><span>${money(get(order, 'kembalian'))}</span></div>
             <hr><p>Terima kasih telah berkunjung ☕</p><p>Solstice Coffee</p>`;
     }

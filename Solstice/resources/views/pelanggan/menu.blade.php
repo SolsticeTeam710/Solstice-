@@ -10,13 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <script
-    src="{{ config('midtrans.is_production')
-        ? 'https://app.midtrans.com/snap/snap.js'
-        : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
-    data-client-key="{{ config('midtrans.client_key') }}">
-</script>
-
 @vite(['resources/css/pelanggan.css', 'resources/js/pelanggan.js'])
 </head>
 <body>
@@ -117,10 +110,10 @@
                                 </button>
                                 <button type="button" class="payment-option" data-payment="QRIS" aria-pressed="false">
                                     <strong><svg class="payment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path d="M9 9h2v2H9zM14 9h2v2h-2zM9 14h2v2H9zM14 14h2v2h-2z"/></svg> QRIS</strong>
-                                    <small>Pindai kode di kasir</small>
+                                    <small>Simulasi: pindai QR demo dengan kamera</small>
                                 </button>
                             </div>
-                            <div class="notice">Pembayaran dilakukan kepada kasir setelah pesanan Anda dikonfirmasi.</div>
+                            <div class="notice">Mode demo: saat konfirmasi, kamera akan memindai QR demo dari ngrok. Tidak ada pembayaran uang nyata.</div>
                         </section>
                     </div>
 
@@ -157,7 +150,7 @@
                         Pesanan berhasil disimpan. Tunjukkan Order ID ini kepada kasir untuk konfirmasi pembayaran.
                     </div>
                     <div class="notice text-left" id="success-qris-note" hidden>
-                        QRIS toko berhasil terbaca. Untuk membayar, pindai QR toko lewat aplikasi e-wallet/mobile banking dan masukkan total pesanan. Tunjukkan Order ID kepada kasir untuk verifikasi.
+                        QR demo berhasil dipindai. Ini hanya simulasi dan tidak memproses pembayaran uang nyata. Tunjukkan Order ID kepada kasir untuk melanjutkan demo.
                     </div>
                     <p class="page-desc">Estimasi penyajian 10–15 menit setelah pesanan dikonfirmasi oleh kasir.</p>
                     <button class="primary success-action" data-page="tracking">Lihat Status Pesanan</button>
@@ -228,13 +221,16 @@
             <section class="scanner-dialog" role="dialog" aria-modal="true" aria-labelledby="qris-scanner-title">
                 <div class="scanner-heading">
                     <div>
-                        <h2 id="qris-scanner-title">Scan QRIS toko</h2>
-                        <p class="page-desc" id="qris-scanner-message">Izinkan akses kamera, lalu arahkan ke QRIS di kasir.</p>
+                        <h2 id="qris-scanner-title">Scan QR Demo QRIS</h2>
+                        <p class="page-desc" id="qris-scanner-message">Buka halaman QR demo di perangkat lain, lalu arahkan kamera ke kode demo.</p>
                     </div>
                     <button type="button" class="secondary" id="qris-scanner-cancel">Batal</button>
                 </div>
                 <div id="qris-reader"></div>
-                <p class="page-desc">Scan ini membaca kode QRIS. Pembayaran tetap dilakukan lewat aplikasi e-wallet/mobile banking.</p>
+                <p class="page-desc">Ini simulasi untuk demo aplikasi. QR ini bukan kode pembayaran dan tidak memindahkan uang.</p>
+                <p class="page-desc">Buka URL ini di laptop atau perangkat lain untuk menampilkan QR yang akan dipindai:</p>
+                <code class="demo-qris-url" id="demo-qris-url"></code>
+                <button type="button" class="secondary" id="copy-demo-qris-url">Salin URL QR demo</button>
             </section>
         </div>
 

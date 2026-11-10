@@ -71,6 +71,11 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
 
 Route::get('/menu', [MenuController::class, 'index'])->name('pelanggan.menu');
 Route::get('/pesan', fn () => view('pelanggan.menu'))->name('pelanggan.pesan');
+Route::get('/demo-qris', fn () => view('pelanggan.qris-demo'))->name('pelanggan.qris-demo');
+Route::get('/demo-qris/scan', fn () => response()->json([
+    'simulation' => true,
+    'message' => 'QR demo terbaca. Tidak ada pembayaran uang nyata.',
+]))->name('pelanggan.qris-demo.scan');
 Route::get('/csrf-token', fn () => response()
     ->json(['token' => csrf_token()])
     ->header('Cache-Control', 'no-store, private'))

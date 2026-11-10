@@ -217,21 +217,24 @@ public function verify(Request $request, string $orderId)
                     'bayar' => 'Uang yang diterima kurang dari total pembayaran.',
                 ]);
             }
+            $kembalian = max(0, $bayar - $total);
+
+            DB::table('pembayaran')->insert([
+                'id_pesanan' => $order->id_pesanan,
+                'tanggal' => now(),
+                'metode_pembayaran' => 'CASH',
+                'bayar' => $bayar,
+                'kembalian' => $kembalian,
+                'subtotal' => $subtotal,
+                'total' => $total,
+            ]);
+        } elseif ($metodePembayaran === 'QRIS') {
+            // QRIS pada mode demo hanya mensimulasikan pemindaian, bukan transaksi uang.
         } else {
-            $bayar = $total;
+            throw ValidationException::withMessages([
+                'metode_pembayaran' => 'Metode pembayaran tidak dikenali.',
+            ]);
         }
-
-        $kembalian = max(0, $bayar - $total);
-
-        DB::table('pembayaran')->insert([
-            'id_pesanan' => $order->id_pesanan,
-            'tanggal' => now(),
-            'metode_pembayaran' => $order->metode_pembayaran ?? 'CASH',
-            'bayar' => $bayar,
-            'kembalian' => $kembalian,
-            'subtotal' => $subtotal,
-            'total' => $total,
-        ]);
 
         DB::table('pesanan')
             ->where('id_pesanan', $order->id_pesanan)
