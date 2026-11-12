@@ -354,7 +354,7 @@
             </div>`).join('')
             : '<p>Rincian produk tidak tersedia.</p>';
 
-        return `<img class="receipt-logo" src="${esc(receiptLogo)}" alt="Logo Solstice Coffee" width="64" height="64"><h2>Solstice Coffee</h2><p class="receipt-address">Jalan Raya Kopo No. 362B, Bojongloa Kaler, Kopo, Bandung, Jawa Barat, 40233</p>
+        return `<img class="receipt-logo" src="${esc(receiptLogo)}" alt="Logo Solstice Coffee" width="64" height="64"><h2>Solstice Coffee</h2><p class="receipt-address">Jl. Soekarno Hatta No.252, Kopo, Kec Bojongloa Kaler, Kota Bandung, Jawa Barat 40223</p>
             <hr>
             <div class="receipt-row"><span>Order ID</span><strong>${esc(id)}</strong></div>
             <div class="receipt-row"><span>Waktu pesan</span><span>${date(get(order, 'tanggal', 'created_at'))}</span></div>
