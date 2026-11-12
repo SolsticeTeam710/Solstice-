@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
-    private array $defaultCategories = ['Coffee', 'Non-Coffee', 'Makanan'];
-
     public function dashboard()
     {
         $labels = ['Mon'=>'Sen','Tue'=>'Sel','Wed'=>'Rab','Thu'=>'Kam','Fri'=>'Jum','Sat'=>'Sab','Sun'=>'Min'];
@@ -86,7 +84,6 @@ class AdminController extends Controller
 
     public function menus(Request $request)
     {
-        $this->ensureDefaultCategories();
         $categories = DB::table('kategori')->orderBy('nama_kategori')->get()->map(function ($category) {
             $category->display_name = $this->categoryLabel($category->nama_kategori);
             return $category;
@@ -166,6 +163,22 @@ class AdminController extends Controller
             DB::table('kategori')->insert($data);
         }
         return back()->with('success', 'Kategori siap digunakan.');
+    }
+
+    public function deleteCategory(int $id)
+    {
+        $category = DB::table('kategori')->where('id_kategori', $id)->first();
+        if (! $category) {
+            return back()->with('error', 'Kategori tidak ditemukan.');
+        }
+
+        if (DB::table('menu')->where('id_kategori', $id)->exists()) {
+            return back()->with('error', 'Kategori masih digunakan oleh menu. Pindahkan menu ke kategori lain terlebih dahulu.');
+        }
+
+        DB::table('kategori')->where('id_kategori', $id)->delete();
+
+        return redirect()->route('admin.menus')->with('success', 'Kategori berhasil dihapus.');
     }
 
     public function usersPage()
@@ -456,33 +469,10 @@ class AdminController extends Controller
                 ->get()
         );
     }
-    public function kategori() { $this->ensureDefaultCategories(); return response()->json(DB::table('kategori')->orderBy('nama_kategori')->get()); }
+    public function kategori() { return response()->json(DB::table('kategori')->orderBy('nama_kategori')->get()); }
     public function stok() { return response()->json(DB::table('menu')->select('id_menu', 'nama_menu', 'stok', 'batas_minimum', 'status')->get()); }
     public function stokMenipis() { return response()->json(DB::table('menu')->select('id_menu', 'nama_menu', 'stok', 'batas_minimum', 'status')->whereColumn('stok', '<=', 'batas_minimum')->get()); }
     public function laporan() { return response()->json(['pendapatan'=>DB::table('pembayaran')->sum('total'),'transaksi'=>DB::table('pembayaran')->distinct('id_pesanan')->count('id_pesanan')]); }
-
-    private function ensureDefaultCategories(): void
-    {
-        $aliases = [
-            'Coffee' => ['coffee', 'kopi'],
-            'Non-Coffee' => ['non-coffee', 'non coffee', 'non-kopi'],
-            'Makanan' => ['makanan'],
-        ];
-
-        // One database round trip is enough to check all defaults; previously
-        // this method queried once per category on every menu page visit.
-        $existing = DB::table('kategori')
-            ->pluck('nama_kategori')
-            ->map(fn ($name) => mb_strtolower(trim((string) $name)))
-            ->all();
-
-        foreach ($this->defaultCategories as $name) {
-            if (! array_intersect($aliases[$name], $existing)) {
-                DB::table('kategori')->insert(['nama_kategori' => $name]);
-                $existing[] = mb_strtolower($name);
-            }
-        }
-    }
 
     private function categoryLabel(string $name): string
     {

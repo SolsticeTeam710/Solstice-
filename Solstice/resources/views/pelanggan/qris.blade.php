@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>QR Demo — Solstice Coffee</title>
+    <title>QRIS — Solstice Coffee</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f5f1eb; color: #30251f; font-family: Arial, sans-serif; }
@@ -19,11 +19,11 @@
 <body>
     <main>
         <div class="eyebrow">Solstice Coffee</div>
-        <h1>QR Demo QRIS</h1>
+        <h1>QRIS Solstice Coffee</h1>
         <p>Tampilkan halaman ini di laptop atau perangkat lain, lalu pindai kodenya dari kamera pada halaman pemesanan pelanggan.</p>
-        <img src="{{ asset('qr-meja/qris-demo.svg') }}" alt="QR demo simulasi Solstice Coffee">
+        <img src="{{ asset('qr-meja/qris.svg') }}" alt="QRIS Solstice Coffee">
         <div class="warning">Simulasi saja — bukan kode pembayaran dan tidak ada uang yang diproses.</div>
-        <code>{{ url('/demo-qris/scan?demo=solstice') }}</code>
+        <code>{{ url('/qris/scan?token=solstice') }}</code>
     </main>
 </body>
 </html>

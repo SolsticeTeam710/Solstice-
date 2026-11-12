@@ -42,8 +42,8 @@ for (const tableNo of [1, 2, 3, 4]) {
   tables.push({ tableNo, padded, filename, destination });
 }
 
-const demoUrl = `${baseUrl}/demo-qris/scan?demo=solstice`;
-fs.writeFileSync(path.join(outputDir, 'qris-demo.svg'), createSvg(demoUrl, 'QR DEMO QRIS', 'Simulasi kamera — bukan pembayaran nyata', demoUrl), 'utf8');
+const qrisUrl = `${baseUrl}/qris/scan?token=solstice`;
+fs.writeFileSync(path.join(outputDir, 'qris.svg'), createSvg(qrisUrl, 'QRIS SOLSTICE COFFEE', 'Simulasi kamera — bukan pembayaran nyata', qrisUrl), 'utf8');
 
 const cards = tables.map(({ padded, filename, destination }) => `
   <section class="card">
@@ -59,5 +59,5 @@ const html = `<!doctype html>
 *{box-sizing:border-box}body{margin:0;padding:20px;background:#f4f1ed;color:#29231f;font-family:Arial,sans-serif}.sheet{max-width:1000px;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{background:#fff;border:1px solid #ddd4cc;border-radius:14px;padding:16px;text-align:center;break-inside:avoid}.card h2{margin:0 0 6px;color:#4b2e20;font-size:20px}.card p{margin:0 0 6px;color:#655c55;font-size:14px}.card img{display:block;width:min(100%,300px);height:auto;margin:0 auto;image-rendering:pixelated}.card small{display:block;overflow-wrap:anywhere;color:#777;font-size:10px}@media print{@page{size:A4 portrait;margin:8mm}body{padding:0;background:#fff}.sheet{gap:6mm}.card{border:1px solid #aaa;border-radius:0;padding:3mm}.card img{width:66mm}.card h2{font-size:15pt}.card p{font-size:9pt}.card small{font-size:7pt}}
 </style></head><body><main class="sheet">${cards}\n</main></body></html>`;
 fs.writeFileSync(path.join(outputDir, 'cetak.html'), html, 'utf8');
-console.log(`QR meja 1–4 dan QR demo dibuat di ${outputDir}`);
+console.log(`QR meja 1–4 dan QRIS dibuat di ${outputDir}`);
 console.log(`Domain yang dipakai: ${baseUrl}`);

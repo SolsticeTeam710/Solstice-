@@ -44,6 +44,8 @@ Route::middleware(['auth', 'role:admin'])
 
         Route::post('/kategori', [AdminController::class, 'storeCategory'])
             ->name('categories.store');
+        Route::delete('/kategori/{id}', [AdminController::class, 'deleteCategory'])
+            ->name('categories.delete');
 
         Route::get('/pengguna', [AdminController::class, 'usersPage'])->name('users');
         Route::post('/pengguna', [AdminController::class, 'storeUser'])->name('users.store');
@@ -71,11 +73,13 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
 
 Route::get('/menu', [MenuController::class, 'index'])->name('pelanggan.menu');
 Route::get('/pesan', fn () => view('pelanggan.menu'))->name('pelanggan.pesan');
-Route::get('/demo-qris', fn () => view('pelanggan.qris-demo'))->name('pelanggan.qris-demo');
-Route::get('/demo-qris/scan', fn () => response()->json([
+Route::get('/qris', fn () => view('pelanggan.qris'))->name('pelanggan.qris');
+Route::get('/qris/scan', fn () => response()->json([
     'simulation' => true,
-    'message' => 'QR demo terbaca. Tidak ada pembayaran uang nyata.',
-]))->name('pelanggan.qris-demo.scan');
+    'message' => 'QRIS terbaca. Tidak ada pembayaran uang nyata.',
+]))->name('pelanggan.qris.scan');
+Route::redirect('/demo-qris', '/qris', 302);
+Route::redirect('/demo-qris/scan', '/qris/scan?token=solstice', 302);
 Route::get('/csrf-token', fn () => response()
     ->json(['token' => csrf_token()])
     ->header('Cache-Control', 'no-store, private'))

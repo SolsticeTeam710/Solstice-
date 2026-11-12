@@ -5,7 +5,15 @@
 <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
     <div class="flex flex-wrap gap-2">
         <a href="{{ route('admin.menus') }}" class="rounded-full px-3 py-1.5 text-xs font-semibold {{ request('kategori') ? 'bg-cream text-brand' : 'bg-brand text-white' }}">Semua</a>
-        @foreach($categories as $category)<a href="{{ route('admin.menus',['kategori'=>$category->display_name]) }}" class="rounded-full px-3 py-1.5 text-xs font-semibold {{ request('kategori')===$category->display_name ? 'bg-brand text-white' : 'bg-cream text-brand' }}">{{ $category->display_name }}</a>@endforeach
+        @foreach($categories as $category)
+            <div class="inline-flex items-center overflow-hidden rounded-full {{ request('kategori')===$category->display_name ? 'bg-brand text-white' : 'bg-cream text-brand' }}">
+                <a href="{{ route('admin.menus',['kategori'=>$category->display_name]) }}" class="px-3 py-1.5 text-xs font-semibold">{{ $category->display_name }}</a>
+                <form method="POST" action="{{ route('admin.categories.delete', $category->id_kategori) }}" onsubmit="return confirm('Hapus kategori ini?')">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="px-2 py-1.5 text-xs font-bold {{ request('kategori')===$category->display_name ? 'text-white/80 hover:bg-white/10' : 'text-red-700 hover:bg-red-50' }}" aria-label="Hapus kategori {{ $category->display_name }}" title="Hapus kategori">×</button>
+                </form>
+            </div>
+        @endforeach
     </div>
     <div class="flex gap-2">
         <details class="relative"><summary class="cursor-pointer list-none rounded-md border border-brand px-3 py-2 text-xs font-semibold text-brand">＋ Kategori</summary><form method="POST" action="{{ route('admin.categories.store') }}" class="absolute right-0 z-10 mt-2 w-64 rounded-lg border border-line bg-white p-3 shadow-lg">@csrf<label class="mb-1 block text-xs font-semibold">Nama kategori</label><input name="nama_kategori" required maxlength="100" class="mb-2 w-full rounded border border-line p-2 text-xs" placeholder="contoh: Teh"><button class="w-full rounded bg-brand p-2 text-xs text-white">Simpan Kategori</button></form></details>

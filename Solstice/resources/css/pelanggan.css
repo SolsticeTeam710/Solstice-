@@ -700,7 +700,7 @@ body {
 #qris-reader { width: 100%; margin: 16px auto; overflow: hidden; border-radius: 12px; }
 #qris-reader video { border-radius: 12px; object-fit: cover; }
 .scanner-dialog > .page-desc { text-align: left; }
-.demo-qris-url { display: block; margin: 8px 0 12px; padding: 10px; border-radius: 8px; background: #f7f4ef; color: var(--coffee); font-size: 12px; overflow-wrap: anywhere; }
+.qris-url { display: block; margin: 8px 0 12px; padding: 10px; border-radius: 8px; background: #f7f4ef; color: var(--coffee); font-size: 12px; overflow-wrap: anywhere; }
 .payment-option strong {
   display: flex;
   align-items: center;

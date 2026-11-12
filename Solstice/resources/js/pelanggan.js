@@ -45,7 +45,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => node.classList.remove("show"), 2400);
   };
-  async function finishDemoQrisScan(scanned) {
+  async function finishQrisScan(scanned) {
     const scanner = qrisScanner;
     const resolve = resolveQrisScan;
     qrisScanner = null;
@@ -62,11 +62,11 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     resolve?.(scanned);
   }
 
-  function scanDemoQris() {
+  function scanQris() {
     const modal = document.getElementById("qris-scanner-modal");
     const message = document.getElementById("qris-scanner-message");
     modal.hidden = false;
-    message.textContent = "Buka halaman QR demo di perangkat lain, lalu arahkan kamera ke kode demo.";
+    message.textContent = "Buka halaman QRIS di perangkat lain, lalu arahkan kamera ke kode QR tersebut.";
 
     const scanner = new Html5Qrcode("qris-reader", {
       formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
@@ -83,41 +83,41 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
           (decodedText) => {
             try {
               const scanned = new URL(decodedText);
-              const validDemo = scanned.origin === window.location.origin
-                && scanned.pathname === "/demo-qris/scan"
-                && scanned.searchParams.get("demo") === "solstice";
+              const validQris = scanned.origin === window.location.origin
+                && scanned.pathname === "/qris/scan"
+                && scanned.searchParams.get("token") === "solstice";
 
-              if (!validDemo) {
-                message.textContent = "Kode bukan QR demo Solstice. Gunakan QR dari halaman /demo-qris.";
+              if (!validQris) {
+                message.textContent = "Kode QRIS tidak cocok. Gunakan kode dari halaman QRIS.";
                 return;
               }
 
-              message.textContent = "QR demo terbaca. Tidak ada pembayaran uang nyata.";
-              void finishDemoQrisScan(true);
+              message.textContent = "QRIS terbaca. Tidak ada pembayaran uang nyata.";
+              void finishQrisScan(true);
             } catch (_) {
-              message.textContent = "Kode tidak valid. Arahkan kamera ke QR demo Solstice.";
+              message.textContent = "Kode tidak valid. Arahkan kamera ke QRIS Solstice.";
             }
           },
           () => {}
         ).catch(() => {
           message.textContent = "Kamera gagal dibuka. Izinkan akses kamera dan gunakan HTTPS atau localhost.";
-          void finishDemoQrisScan(false);
+          void finishQrisScan(false);
         });
       });
     });
   }
 
   document.getElementById("qris-scanner-cancel").addEventListener("click", () => {
-    void finishDemoQrisScan(false);
+    void finishQrisScan(false);
   });
-  const demoQrisUrl = `${window.location.origin}/demo-qris`;
-  document.getElementById("demo-qris-url").textContent = demoQrisUrl;
-  document.getElementById("copy-demo-qris-url").addEventListener("click", async () => {
+  const qrisUrl = `${window.location.origin}/qris`;
+  document.getElementById("qris-url").textContent = qrisUrl;
+  document.getElementById("copy-qris-url").addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(demoQrisUrl);
-      toast("URL QR demo disalin. Buka di laptop atau perangkat lain.");
+      await navigator.clipboard.writeText(qrisUrl);
+      toast("URL QRIS disalin. Buka di laptop atau perangkat lain.");
     } catch (_) {
-      toast("Salin URL QR demo yang tampil di atas ke perangkat lain.");
+      toast("Salin URL QRIS yang tampil di atas ke perangkat lain.");
     }
   });
   const picture = (item) => {
@@ -367,9 +367,9 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
     try {
       if (selectedPayment === "QRIS") {
-        const scanned = await scanDemoQris();
+        const scanned = await scanQris();
         if (!scanned) {
-          toast("Simulasi QRIS dibatalkan. Pesanan belum dibuat.");
+          toast("Pemindaian QRIS dibatalkan. Pesanan belum dibuat.");
           return;
         }
       }
@@ -424,7 +424,6 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
       document.getElementById("success-total").textContent = format(result.order.total_harga);
       document.getElementById("success-cash-note").hidden = selectedPayment === "QRIS";
       document.getElementById("success-qris-note").hidden = selectedPayment !== "QRIS";
-
       cart.clear();
       renderCart();
       showPage("success");
