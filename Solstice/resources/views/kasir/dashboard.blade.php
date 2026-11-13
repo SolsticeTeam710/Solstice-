@@ -170,11 +170,11 @@
             </section>
 
             <section class="view" id="view-search">
-                <section class="card"><div class="card-head"><div><h2>Cari Nama Pelanggan</h2><p class="card-subtitle">Masukkan nama pelanggan untuk menemukan pesanan.</p></div></div><form class="toolbar" id="search-form"><input class="input search-input" id="search-input" placeholder="Masukkan nama pelanggan" autocomplete="off"><button class="btn primary">⌕ Cari pelanggan</button></form><div id="search-result"></div></section>
+                <section class="card"><div class="card-head"><div><h2>Cari Nama Pelanggan</h2><p class="card-subtitle">Hanya menampilkan detail pesanan yang sudah selesai.</p></div></div><form class="toolbar" id="search-form"><input class="input search-input" id="search-input" placeholder="Masukkan nama pelanggan" autocomplete="off"><button class="btn primary">⌕ Cari pelanggan</button></form><div id="search-result"></div></section>
             </section>
 
             <section class="view" id="view-verify">
-                <p class="page-message">Periksa detail pesanan, lalu konfirmasi pembayaran yang sudah diterima.</p>
+                <p class="page-message">Cari transaksi yang menunggu pembayaran, lalu proses pembayaran. Rincian pesanan tersedia di menu Cari Nama Pelanggan setelah transaksi selesai.</p>
                 <section class="card"><div class="card-head"><div><h2>Verifikasi Bayar</h2><p class="card-subtitle">Cari nama pelanggan untuk menemukan pesanan yang perlu diverifikasi.</p></div></div><form class="toolbar" id="verify-search-form"><input class="input search-input" id="verify-input" placeholder="Masukkan nama pelanggan" autocomplete="off"><button class="btn primary">Cari pelanggan</button></form></section>
                 <div id="verify-result"></div>
             </section>
@@ -329,14 +329,32 @@
             '</article>' + action + '</section>';
     }
 
+    function transactionProcess(order) {
+        const id = get(order, 'order_id', 'id_pesanan') || '';
+        const total = Number(get(order, 'total_harga', 'total') || 0);
+        const method = String(get(order, 'metode_pembayaran') || 'CASH').toUpperCase();
+        const cash = method === 'CASH';
+        return '<article class="card" data-order-card><div class="card-head"><div><h2>Proses Pembayaran</h2><p class="card-subtitle">Pelanggan: ' + esc(get(order, 'nama_pelanggan', 'nama', 'customer_name') || 'Pelanggan') + '</p></div></div>' +
+            '<dl class="detail-list"><dt>Metode pembayaran</dt><dd>' + esc(method) + '</dd><dt>Total tagihan</dt><dd><strong>' + money(total) + '</strong></dd>' +
+            (cash ? '<dt>Uang diterima</dt><dd><input class="input cash-input" type="number" min="0" step="1" inputmode="numeric" data-cash-amount data-total="' + total + '" placeholder="Masukkan uang yang diterima"></dd><dt>Kembalian</dt><dd data-change-preview>' + money(0) + '</dd>' : '') +
+            '</dl>' + (cash ? '<p class="helper cash-hint" data-cash-hint>Masukkan nominal uang yang diterima untuk menghitung kembalian.</p>' : '<p class="helper">Pastikan pembayaran QRIS sudah diterima sebelum diproses. QRIS di aplikasi ini menggunakan mode simulasi.</p>') +
+            '<div class="divider"></div><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Bayar</button></article>';
+    }
+
     async function findOrder(id){if(!id.trim())throw new Error('Pesanan tidak ditemukan.');return request(`${api}/orders/${encodeURIComponent(id.trim())}`)}
-    async function findOrdersByCustomer(name){if(!name.trim())throw new Error('Masukkan nama pelanggan terlebih dahulu.');return request(`${api}/orders/search?nama=${encodeURIComponent(name.trim())}`)}
+    async function findOrdersByCustomer(name,status=''){if(!name.trim())throw new Error('Masukkan nama pelanggan terlebih dahulu.');const params=new URLSearchParams({nama:name.trim()});if(status)params.set('status',status);return request(`${api}/orders/search?${params.toString()}`)}
     function customerOrderMatches(orders,purpose){
+        if(purpose==='search'){
+            const completedStatuses=['selesai','done','completed','lunas'];
+            orders=Array.isArray(orders)?orders.filter(order=>completedStatuses.includes(String(get(order,'status','status_pesanan')||'').trim().toLowerCase())):[];
+            if(!orders.length)return '<div class="empty">Tidak ada pesanan selesai untuk nama pelanggan tersebut.</div>';
+        }
         if(!Array.isArray(orders)||!orders.length)return '<div class="empty">Pesanan tidak ditemukan.</div>';
-        const actionLabel=purpose==='receipt'?'Tampilkan struk':purpose==='verify'?'Pilih pesanan':'Lihat detail';
+        const actionLabel=purpose==='receipt'?'Tampilkan struk':purpose==='verify'?'Detail Pesanan':'Lihat detail';
         return '<div class="grid gap-3">'+orders.map(order=>{
             const id=get(order,'order_id','id_pesanan')||'';
-            return '<article class="card"><div class="card-head"><div><h2>'+esc(get(order,'nama_pelanggan')||'Pelanggan')+'</h2><p class="card-subtitle">Order '+esc(id)+' · '+date(get(order,'tanggal','created_at'))+'</p></div>'+badge(get(order,'status','status_pesanan'))+'</div><div class="receipt-row"><span>Total pesanan</span><strong>'+money(get(order,'total_harga','total'))+'</strong></div><button class="btn primary" data-customer-order="'+esc(id)+'" data-customer-purpose="'+purpose+'">'+actionLabel+'</button></article>';
+            const reference=purpose==='verify'?date(get(order,'tanggal','created_at')):'Order '+esc(id)+' · '+date(get(order,'tanggal','created_at'));
+            return '<article class="card"><div class="card-head"><div><h2>'+esc(get(order,'nama_pelanggan')||'Pelanggan')+'</h2><p class="card-subtitle">'+reference+'</p></div>'+badge(get(order,'status','status_pesanan'))+'</div><div class="receipt-row"><span>'+(purpose==='verify'?'Total tagihan':'Total pesanan')+'</span><strong>'+money(get(order,'total_harga','total'))+'</strong></div><button class="btn primary" data-customer-order="'+esc(id)+'" data-customer-purpose="'+purpose+'">'+actionLabel+'</button></article>';
         }).join('')+'</div>';
     }
     function receipt(order) {
@@ -423,7 +441,7 @@
                 const order = await findOrder(detail.dataset.detail);
                 const isPending = normalize(get(order, 'status', 'status_pesanan')) === 'pending';
                 switchView(isPending ? 'verify' : 'search');
-                document.getElementById(isPending ? 'verify-result' : 'search-result').innerHTML = orderDetail(order);
+                document.getElementById(isPending ? 'verify-result' : 'search-result').innerHTML = isPending ? transactionProcess(order) : orderDetail(order);
             } catch (error) {
                 notify(error.message, 'error');
             }
@@ -439,7 +457,7 @@
                     document.getElementById('receipt-result').innerHTML = receipt(order);
                 } else {
                     const target = purpose === 'verify' ? 'verify-result' : 'search-result';
-                    document.getElementById(target).innerHTML = orderDetail(order);
+                    document.getElementById(target).innerHTML = purpose === 'verify' ? transactionProcess(order) : orderDetail(order);
                 }
             } catch (error) {
                 notify(error.message, 'error');
@@ -449,7 +467,7 @@
         const verify = event.target.closest('[data-verify]');
         if (verify) {
             try {
-                const orderCard = verify.closest('.detail-layout')?.querySelector('[data-order-card]');
+                const orderCard = verify.closest('[data-order-card]');
                 const cashInput = orderCard?.querySelector('[data-cash-amount]');
                 const options = { method: 'PUT' };
 
@@ -469,7 +487,7 @@
                 await request(api + '/orders/' + encodeURIComponent(verify.dataset.verify) + '/verify', options);
                 notify('Pembayaran berhasil diverifikasi.');
                 const order = await findOrder(verify.dataset.verify);
-                document.getElementById('verify-result').innerHTML = orderDetail(order);
+                document.getElementById('verify-result').innerHTML = '<article class="card"><h2>Pembayaran berhasil diproses</h2><p class="helper">Pesanan ' + esc(get(order, 'nama_pelanggan', 'nama', 'customer_name') || 'pelanggan') + ' sekarang berstatus selesai. Detail pesanan dapat dilihat di Cari Nama Pelanggan.</p></article>';
                 loadData();
             } catch (error) {
                 notify(error.message, 'error');
@@ -497,8 +515,8 @@
                 : `Kembalian: ${money(amount - total)}.`;
     });
 
-    document.getElementById('search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('search-result');box.innerHTML='<div class="loading">Mencari nama pelanggan…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('search-input').value),'search')}catch(error){box.innerHTML=`<div class="empty">${esc(error.message)}</div>`}});
-    document.getElementById('verify-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('verify-result');box.innerHTML='<div class="loading">Mencari pesanan pelanggan…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('verify-input').value),'verify')}catch(error){box.innerHTML=`<div class="card empty">${esc(error.message)}</div>`}});
+    document.getElementById('search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('search-result');box.innerHTML='<div class="loading">Mencari pesanan yang sudah selesai…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('search-input').value,'completed'),'search')}catch(error){box.innerHTML=`<div class="empty">${esc(error.message)}</div>`}});
+    document.getElementById('verify-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('verify-result');box.innerHTML='<div class="loading">Mencari transaksi yang menunggu pembayaran…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('verify-input').value,'pending'),'verify')}catch(error){box.innerHTML=`<div class="card empty">${esc(error.message)}</div>`}});
     document.getElementById('receipt-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('receipt-result');box.innerHTML='<div class="loading">Mencari pesanan pelanggan…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('receipt-input').value),'receipt')}catch(error){box.innerHTML=`<p class="helper">${esc(error.message)}</p>`}});
     loadData();
 })();

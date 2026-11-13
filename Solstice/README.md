@@ -1,109 +1,52 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SOLSTICE COFFE
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
-
-## About Laravel
-
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
-
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
-
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# Coffe Shop Order System
-
-Sistem informasi pemesanan dan manajemen operasional Coffe Shop berbasis web.
-
-## Aktor
-
-- Pelanggan
-- Kasir
-- Admin
+Aplikasi web untuk pemesanan menu dan pengelolaan operasional kedai SOLSTICE COFFE. Pelanggan memesan melalui halaman menu yang dibuka dari QR meja, Kasir memeriksa pesanan dan memverifikasi pembayaran, sedangkan Admin mengelola data kedai dan laporan.
 
 ## Fitur
 
 ### Pelanggan
-- Scan QR
-- Menu
-- Keranjang
-- Buat Pesanan
-- Order ID & Nomor Antrean
-- Status Pesanan
+
+- Melihat menu, kategori, harga, dan ketersediaan stok.
+- Memilih menu, jumlah, catatan pesanan, nomor meja, dan metode pembayaran Cash atau QRIS.
+- Mendapatkan Order ID setelah pesanan berhasil disimpan.
+- Melihat status pesanan melalui nama pelanggan.
 
 ### Kasir
-- Login
-- Dashboard
-- Daftar Pesanan
-- Cari Order ID / Nama Pelanggan
-- Verifikasi Pembayaran
-- Cetak Struk
+
+- Login dengan akun role Kasir.
+- Melihat dan mencari pesanan melalui nama pelanggan.
+- Memeriksa rincian dan total pesanan.
+- Memverifikasi pembayaran Cash atau QRIS.
+- Melihat kembalian untuk pembayaran Cash dan mencetak bukti transaksi melalui browser.
 
 ### Admin
-- Login
-- Dashboard
-- Kelola Pengguna
-- Kelola Menu & Kategori
-- Kelola Stok
-- Peringatan Stok Menipis
-- Laporan Penjualan
-- Download / Cetak Laporan
+
+- Login dengan akun role Admin.
+- Mengelola menu, kategori, akun Admin/Kasir, stok menu, dan batas minimum stok.
+- Melihat stok menipis.
+- Melihat laporan penjualan berdasarkan periode serta mengunduh laporan CSV.
+
+## Alur Pesanan
+
+1. Pelanggan membuka menu dari QR meja, memilih item, lalu mengirim pesanan.
+2. Sistem memvalidasi meja, ketersediaan menu, dan stok. Pesanan yang valid disimpan dengan status `pending`, dan meja ditandai terisi.
+3. Kasir mencari pesanan dan memverifikasi pembayaran.
+4. Jika verifikasi berhasil, pembayaran disimpan, stok menu dikurangi, status pesanan menjadi `selesai`, dan meja dikosongkan.
+5. Pelanggan dapat memeriksa status pesanan menggunakan Order ID.
+
+Status yang digunakan pada implementasi saat ini adalah `pending` dan `selesai`. Stok yang dikelola adalah stok menu; stok bahan baku belum dikelola terpisah. QRIS dipindai dari browser pelanggan, sementara pencatatan pembayarannya dikonfirmasi melalui proses Kasir. Aplikasi belum menggunakan payment gateway otomatis.
 
 ## Teknologi
 
-- PHP
-- PostgreSQL
-- HTML
-- CSS
-- JavaScript
+- PHP 8.2
+- Laravel 12
+- SQLite sebagai konfigurasi database bawaan (`.env.example`)
+- JavaScript, CSS, dan Blade
+- Vite 7 dan Tailwind CSS 4
+- `html5-qrcode` untuk pemindaian QRIS dari browser
 
-## Tim
+## Persyaratan
 
-- Raka Herlambang — Frontend & UI/UX
-- Zacka Tapa Raga Alhamra — Backend & Database
+- PHP 8.2+ dengan ekstensi yang dibutuhkan Laravel dan SQLite/PDO SQLite.
+- Composer.
+- Node.js dan npm.

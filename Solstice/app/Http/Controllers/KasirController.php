@@ -92,9 +92,17 @@ class KasirController extends Controller
                 'pembayaran.kembalian'
             )
             ->whereRaw('LOWER(pesanan.nama_pelanggan) LIKE ?', ['%'.$name.'%'])
-            ->orderByDesc('pesanan.tanggal')
-            ->limit(25)
-            ->get();
+            ->orderByDesc('pesanan.tanggal');
+
+        // Menu pencarian detail pelanggan hanya boleh mengembalikan pesanan selesai.
+        // Pencarian di menu verifikasi/struk tetap dapat memakai semua status.
+        if ($request->query('status') === 'completed') {
+            $orders->whereIn('pesanan.status', ['selesai', 'done', 'completed', 'lunas']);
+        } elseif ($request->query('status') === 'pending') {
+            $orders->where('pesanan.status', 'pending');
+        }
+
+        $orders = $orders->limit(25)->get();
 
         if ($orders->isEmpty()) {
             return response()->json(['message' => 'Pesanan dengan nama pelanggan tersebut tidak ditemukan.'], 404);
