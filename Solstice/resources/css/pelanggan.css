@@ -551,6 +551,10 @@ body {
   background: var(--coffee);
   color: white;
 }
+.step.rejected .step-mark {
+  background: #fff0ed;
+  color: #9b3927;
+}
 .step:not(:last-child):before {
   content: "";
   position: absolute;

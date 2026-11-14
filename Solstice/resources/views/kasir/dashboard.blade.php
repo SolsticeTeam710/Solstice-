@@ -33,6 +33,10 @@
     .order-items th,.order-items td{font-size:11px}
     .cash-input{width:100%;max-width:240px}
     .cash-hint{margin-top:5px}
+    .btn.danger{border-color:#e6c5bf;color:#9b3927}
+    .btn.danger:hover{background:#fff0ed;border-color:#d9a399}
+    .payment-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .badge.rejected{background:#fff0ed;color:#9b3927}
     .btn:disabled{opacity:.6;cursor:wait}
     @media(max-width:560px){.session>span:first-child{font-size:0}.session>span:first-child:first-letter{font-size:12px}.content{padding-bottom:28px}}
 </style>
@@ -166,7 +170,7 @@
             </section>
 
             <section class="view" id="view-orders">
-                <section class="card"><div class="card-head"><div><h2>Daftar Pesanan</h2><p class="card-subtitle">Pantau status pesanan yang masuk.</p></div><button class="btn" data-refresh>↻ Segarkan</button></div><div class="filter-row" id="status-filters"><button class="filter-chip active" data-status="all">Semua</button><button class="filter-chip" data-status="pending">Menunggu konfirmasi kasir</button><button class="filter-chip" data-status="done">Selesai</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Nama Pelanggan</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orders-table"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div><div id="orders-empty" class="empty" hidden><div class="empty-icon">☕</div>Belum ada pesanan.</div><div class="orders-pagination" id="orders-pagination" hidden><span class="orders-pagination-summary" id="orders-page-summary"></span><div class="actions"><button class="btn" data-order-page="-1">← Sebelumnya</button><button class="btn" data-order-page="1">Berikutnya →</button></div></div></section>
+                <section class="card"><div class="card-head"><div><h2>Daftar Pesanan</h2><p class="card-subtitle">Pantau status pesanan yang masuk.</p></div><button class="btn" data-refresh>↻ Segarkan</button></div><div class="filter-row" id="status-filters"><button class="filter-chip active" data-status="all">Semua</button><button class="filter-chip" data-status="pending">Menunggu konfirmasi kasir</button><button class="filter-chip" data-status="done">Selesai</button><button class="filter-chip" data-status="rejected">Pembayaran ditolak</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Nama Pelanggan</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orders-table"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div><div id="orders-empty" class="empty" hidden><div class="empty-icon">☕</div>Belum ada pesanan.</div><div class="orders-pagination" id="orders-pagination" hidden><span class="orders-pagination-summary" id="orders-page-summary"></span><div class="actions"><button class="btn" data-order-page="-1">← Sebelumnya</button><button class="btn" data-order-page="1">Berikutnya →</button></div></div></section>
             </section>
 
             <section class="view" id="view-search">
@@ -209,8 +213,8 @@
                 timeZone: 'Asia/Jakarta',
             }).format(parsed);
     };
-    const normalize = status => { const s=String(status||'').toLowerCase(); if(['pending','baru','menunggu pembayaran','menunggu','menunggu konfirmasi kasir'].includes(s))return 'pending'; if(['selesai','done','completed','lunas'].includes(s))return 'done'; return 'other'; };
-    const statusText = status => ({pending:'Menunggu konfirmasi kasir',done:'Selesai',other:'Status lain'}[normalize(status)]);
+    const normalize = status => { const s=String(status||'').toLowerCase(); if(['pending','baru','menunggu pembayaran','menunggu','menunggu konfirmasi kasir'].includes(s))return 'pending'; if(['selesai','done','completed','lunas'].includes(s))return 'done'; if(['ditolak','rejected'].includes(s))return 'rejected'; return 'other'; };
+    const statusText = status => ({pending:'Menunggu konfirmasi kasir',done:'Selesai',rejected:'Pembayaran ditolak',other:'Status lain'}[normalize(status)]);
     const badge = status => `<span class="badge ${normalize(status)}">${esc(statusText(status))}</span>`;
     const get = (obj,...keys) => { for(const key of keys)if(obj?.[key]!==undefined&&obj?.[key]!==null)return obj[key]; return null; };
 
@@ -301,12 +305,14 @@
 
         if (stage === 'pending') {
             action = method === 'QRIS'
-                ? '<article class="card"><h2>Konfirmasi Pembayaran</h2><p class="helper">Pembayaran dengan metode QRIS telah dikonfirmasi.</p><div class="divider"></div><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Pembayaran</button></article>'
-                : '<article class="card"><h2>Verifikasi Bayar</h2><p class="helper">Pastikan pembayaran sudah diterima sebelum dikonfirmasi.</p><div class="divider"></div><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Bayar</button></article>';
+                ? '<article class="card"><h2>Konfirmasi Pembayaran</h2><p class="helper">Pembayaran dengan metode QRIS telah dikonfirmasi.</p><div class="divider"></div><div class="payment-actions"><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Pembayaran</button><button class="btn danger" data-reject="' + esc(id) + '">Tolak Pembayaran</button></div></article>'
+                : '<article class="card"><h2>Verifikasi Bayar</h2><p class="helper">Pastikan pembayaran sudah diterima sebelum dikonfirmasi.</p><div class="divider"></div><div class="payment-actions"><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Bayar</button><button class="btn danger" data-reject="' + esc(id) + '">Tolak Pembayaran</button></div></article>';
         } else if (stage === 'done') {
             action = method === 'QRIS'
                 ? '<article class="card"><h2>Konfirmasi Pembayaran</h2><p class="helper">Pembayaran dengan metode QRIS telah dikonfirmasi.</p></article>'
                 : '<article class="card"><h2>Pembayaran terkonfirmasi</h2><p class="helper">Pesanan sudah selesai.</p></article>';
+        } else if (stage === 'rejected') {
+            action = '<article class="card"><h2>Pembayaran Ditolak</h2><p class="helper">Pesanan ini tidak diproses. Silakan hubungi kasir untuk informasi lebih lanjut.</p></article>';
         } else {
             action = '<article class="card"><h2>Status pesanan lama</h2><p class="helper">Silakan tanyakan kepada kasir untuk memastikan status pesanan ini.</p></article>';
         }
@@ -488,6 +494,23 @@
                 notify('Pembayaran berhasil diverifikasi.');
                 const order = await findOrder(verify.dataset.verify);
                 document.getElementById('verify-result').innerHTML = '<article class="card"><h2>Pembayaran berhasil diproses</h2><p class="helper">Pesanan ' + esc(get(order, 'nama_pelanggan', 'nama', 'customer_name') || 'pelanggan') + ' sekarang berstatus selesai. Detail pesanan dapat dilihat di Cari Nama Pelanggan.</p></article>';
+                loadData();
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        const reject = event.target.closest('[data-reject]');
+        if (reject) {
+            const orderId = reject.dataset.reject;
+            if (!window.confirm('Tolak pembayaran untuk pesanan ' + orderId + '? Pesanan akan ditandai ditolak dan meja tersedia kembali.')) return;
+
+            try {
+                await request(api + '/orders/' + encodeURIComponent(orderId) + '/reject', { method: 'PUT' });
+                const order = await findOrder(orderId);
+                const resultContainer = reject.closest('#search-result, #verify-result') || document.getElementById('verify-result');
+                resultContainer.innerHTML = orderDetail(order);
+                notify('Pembayaran ditolak.');
                 loadData();
             } catch (error) {
                 notify(error.message, 'error');

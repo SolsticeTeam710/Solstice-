@@ -200,6 +200,13 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
           step2Title: "Pembayaran terkonfirmasi",
           step2Description: "Kasir telah memverifikasi pembayaran dan menyelesaikan pesanan.",
         },
+        ditolak: {
+          rejected: true,
+          currentStep: 2,
+          message: "Pembayaran ditolak oleh kasir. Silakan hubungi kasir untuk bantuan.",
+          step2Title: "Pembayaran ditolak",
+          step2Description: "Pesanan ini tidak diproses. Hubungi kasir untuk informasi lebih lanjut.",
+        },
       };
       const state = states[result.status] || {
         currentStep: 2,
@@ -221,6 +228,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
         const done = state.finished || number < state.currentStep;
         step.classList.toggle("done", done);
         step.classList.toggle("current", !state.finished && number === state.currentStep);
+        step.classList.toggle("rejected", Boolean(state.rejected) && number === 2);
 
         const mark = step.querySelector(".step-mark");
         if (mark) mark.textContent = done ? "✓" : String(number);
