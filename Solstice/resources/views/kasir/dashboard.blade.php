@@ -461,8 +461,8 @@
         const verify = event.target.closest('[data-verify]');
         if (verify) {
             try {
-                const orderCard = verify.closest('[data-order-card]');
-                const cashInput = orderCard?.querySelector('[data-cash-amount]');
+                const orderDetails = verify.closest('.detail-layout') || verify.closest('[data-order-card]');
+                const cashInput = orderDetails?.querySelector('[data-cash-amount]');
                 const options = { method: 'PUT' };
 
                 if (cashInput) {
