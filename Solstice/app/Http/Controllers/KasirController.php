@@ -264,32 +264,4 @@ public function verify(Request $request, string $orderId)
     return response()->json(['message' => 'Pembayaran diverifikasi.']);
 }
 
-public function reject(string $orderId)
-{
-    DB::transaction(function () use ($orderId) {
-        $order = DB::table('pesanan')
-            ->where('order_id', $orderId)
-            ->lockForUpdate()
-            ->first();
-
-        abort_if(!$order, 404, 'Pesanan tidak ditemukan.');
-        abort_unless($order->status === 'pending', 409, 'Hanya pesanan yang menunggu konfirmasi dapat ditolak.');
-
-        DB::table('pesanan')
-            ->where('id_pesanan', $order->id_pesanan)
-            ->update(['status' => 'ditolak']);
-
-        DB::table('meja')
-            ->where('id_pesanan', $order->id_pesanan)
-            ->update([
-                'id_pesanan' => null,
-                'status' => 'kosong',
-            ]);
-    });
-
-    Cache::forever('admin.metrics.version', (string) Str::uuid());
-
-    return response()->json(['message' => 'Pembayaran ditolak. Pesanan ditandai ditolak.']);
-}
-
 }

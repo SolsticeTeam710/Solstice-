@@ -34,7 +34,7 @@ Aplikasi berbasis web untuk pemesanan dari meja dan pengelolaan operasional keda
 1. Pelanggan membuka URL meja, misalnya /pesan?meja=1, lalu memilih menu.
 2. Server memvalidasi nomor meja, menu, stok, dan data pesanan. Pesanan yang berhasil dibuat berstatus pending.
 3. Kasir memeriksa pesanan lalu mengonfirmasi atau menolaknya.
-4. Saat pesanan dikonfirmasi, stok menu dikurangi dan meja dikosongkan. Pesanan berstatus selesai. Jika ditolak, pesanan berstatus ditolak dan meja dikosongkan.
+4. Saat kasir mengonfirmasi pesanan, stok menu dikurangi, meja dikosongkan, dan pesanan berstatus selesai.
 5. Pelanggan dapat memeriksa status dengan Order ID.
 
 ### Batasan Pembayaran dan Laporan Saat Ini
@@ -177,7 +177,6 @@ Untuk demo melalui jaringan lokal, gunakan alamat laptop server, misalnya http:/
 | POST | /api/pesanan | Publik dengan CSRF | Membuat pesanan; dibatasi maksimal 10 request per menit. |
 | GET | /api/kasir/* | Kasir/Admin | Dashboard dan pencarian pesanan. |
 | PUT | /api/kasir/orders/{orderId}/verify | Kasir/Admin | Memproses konfirmasi pembayaran. |
-| PUT | /api/kasir/orders/{orderId}/reject | Kasir/Admin | Menolak pesanan yang masih pending. |
 | GET | /api/admin/* | Admin | Data dashboard, pengguna, menu, stok, dan laporan. |
 
 Route web dan detail implementasi dapat dilihat di routes/web.php, routes/api.php, serta app/Http/Controllers/.
@@ -229,7 +228,7 @@ Jalankan tes yang tersedia dengan:
 php artisan test
 ~~~
 
-Saat README ini ditulis, file test yang ada masih berupa contoh bawaan Laravel. Perintah tersebut belum membuktikan seluruh alur Solstice telah lulus QA; siapkan skenario uji khusus untuk pemesanan, stok, pembayaran, penolakan, laporan, dan hak akses sebelum release candidate.
+Saat README ini ditulis, file test yang ada masih berupa contoh bawaan Laravel. Perintah tersebut belum membuktikan seluruh alur Solstice telah lulus QA; siapkan skenario uji khusus untuk pemesanan, stok, pembayaran, laporan, dan hak akses sebelum release candidate.
 
 ## Keamanan dan Batasan Operasional
 
