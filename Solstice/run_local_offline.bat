@@ -11,16 +11,16 @@ echo Pastikan PostgreSQL lokal sudah aktif dan .env sudah
 echo menggunakan database lokal.
 echo.
 
-set /p IP=Masukkan IPv4 laptop dari ipconfig:
+set /p IP=:10.38.35.11
 
 if "%IP%"=="" (
-    echo IP belum diisi.
+    echo IP 10.38.35.11.
     pause
     exit /b
 )
 
 echo.
-echo Alamat server lokal: http://%IP%:8000
+echo Alamat server lokal: http://10.38.35.11:8000
 echo.
 
 echo [1/3] Membersihkan cache konfigurasi dan route...
