@@ -45,6 +45,17 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => node.classList.remove("show"), 2400);
   };
+  const paymentMethodNote = document.getElementById("payment-method-note");
+  function updatePaymentMethodNote() {
+    if (!paymentMethodNote) return;
+    const notes = {
+      CASH: "Pembayaran tunai dilakukan di kasir.",
+      TRANSFER: "Transfer sesuai instruksi, lalu berikan Order ID kepada kasir agar pembayaran diperiksa dan dikonfirmasi manual.",
+      QRIS: "QRIS pada aplikasi ini hanya simulasi dan tidak memproses pembayaran uang nyata.",
+    };
+    paymentMethodNote.textContent = notes[payment] || notes.CASH;
+  }
+  updatePaymentMethodNote();
   async function finishQrisScan(scanned) {
     const scanner = qrisScanner;
     const resolve = resolveQrisScan;
@@ -316,12 +327,13 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     }
     const option = event.target.closest("[data-payment]");
     if (option) {
-      payment = option.dataset.payment;
+      payment = String(option.dataset.payment || "CASH").toUpperCase();
       document.querySelectorAll(".payment-option").forEach((button) => {
         const selected = button === option;
         button.classList.toggle("active", selected);
         button.setAttribute("aria-pressed", String(selected));
       });
+      updatePaymentMethodNote();
     }
   });
   document.getElementById("menu-search").addEventListener("input", (event) => {
@@ -430,8 +442,10 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
       document.getElementById("success-order").textContent = `#${lastOrderId}`;
       document.getElementById("track-order").textContent = `#${lastOrderId}`;
       document.getElementById("success-total").textContent = format(result.order.total_harga);
-      document.getElementById("success-cash-note").hidden = selectedPayment === "QRIS";
+      document.getElementById("success-cash-note").hidden = selectedPayment !== "CASH";
       document.getElementById("success-qris-note").hidden = selectedPayment !== "QRIS";
+      document.getElementById("success-transfer-note").hidden = selectedPayment !== "TRANSFER";
+      document.getElementById("transfer-amount-label").textContent = format(result.order.total_harga);
       cart.clear();
       renderCart();
       showPage("success");

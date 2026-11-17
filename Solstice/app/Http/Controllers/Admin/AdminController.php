@@ -23,6 +23,10 @@ class AdminController extends Controller
         $version = Cache::get('admin.metrics.version', '0');
         $metrics = Cache::remember("admin.dashboard.metrics.{$version}", now()->addSeconds(15), function () use ($firstDay, $today) {
             $dailySales = DB::table('pembayaran')->select(DB::raw('DATE(tanggal) as hari'),DB::raw('SUM(total) as total'))
+                ->where(function ($query) {
+                    $query->whereNull('status_pembayaran')
+                        ->orWhere('status_pembayaran', 'TERKONFIRMASI');
+                })
                 ->where('tanggal', '>=', $firstDay->copy()->startOfDay())
                 ->where('tanggal', '<', $today->copy()->addDay()->startOfDay())
                 ->groupBy(DB::raw('DATE(tanggal)'))->pluck('total','hari')->all();
@@ -365,6 +369,10 @@ class AdminController extends Controller
         $report = Cache::remember($cacheKey, now()->addSeconds(30), function () use ($startAt, $endExclusive) {
             $summary = DB::table('pembayaran')
                 ->join('pesanan', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+                ->where(function ($query) {
+                    $query->whereNull('pembayaran.status_pembayaran')
+                        ->orWhere('pembayaran.status_pembayaran', 'TERKONFIRMASI');
+                })
                 ->where('pembayaran.tanggal', '>=', $startAt)
                 ->where('pembayaran.tanggal', '<', $endExclusive)
                 ->selectRaw(
@@ -386,6 +394,10 @@ class AdminController extends Controller
                 ->groupBy('menu.nama_menu','kategori.nama_kategori')->orderByDesc('terjual')->limit(5)->get()
                 ->map(fn($row)=>['nama'=>$row->nama_menu,'kategori'=>$row->nama_kategori,'terjual'=>$row->terjual,'omzet'=>$row->omzet])->all();
             $daily = DB::table('pembayaran')->select(DB::raw('DATE(tanggal) as hari'),DB::raw('SUM(total) as total'))
+                ->where(function ($query) {
+                    $query->whereNull('status_pembayaran')
+                        ->orWhere('status_pembayaran', 'TERKONFIRMASI');
+                })
                 ->where('tanggal', '>=', $startAt)
                 ->where('tanggal', '<', $endExclusive)
                 ->groupBy(DB::raw('DATE(tanggal)'))->orderBy('hari')->get()
@@ -422,6 +434,10 @@ class AdminController extends Controller
         $start = $request->query('dari', now()->startOfWeek()->toDateString());
         $end = $request->query('sampai', now()->toDateString());
         $rows = DB::table('pembayaran')->join('pesanan','pembayaran.id_pesanan','=','pesanan.id_pesanan')
+            ->where(function ($query) {
+                $query->whereNull('pembayaran.status_pembayaran')
+                    ->orWhere('pembayaran.status_pembayaran', 'TERKONFIRMASI');
+            })
             ->whereBetween(DB::raw('DATE(pembayaran.tanggal)'),[$start,$end])
             ->select('pesanan.id_pesanan','pesanan.tanggal','pembayaran.metode_pembayaran','pembayaran.total')->orderBy('pesanan.tanggal')->get();
         return response()->streamDownload(function () use ($rows) {
@@ -444,6 +460,10 @@ class AdminController extends Controller
 
         $rows = DB::table('pembayaran')
             ->join('pesanan', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->where(function ($query) {
+                $query->whereNull('pembayaran.status_pembayaran')
+                    ->orWhere('pembayaran.status_pembayaran', 'TERKONFIRMASI');
+            })
             ->whereBetween(DB::raw('DATE(pembayaran.tanggal)'), [$start, $end])
             ->select('pesanan.order_id', 'pesanan.tanggal', 'pembayaran.metode_pembayaran', 'pembayaran.total')
             ->orderBy('pembayaran.tanggal')
@@ -472,7 +492,18 @@ class AdminController extends Controller
     public function kategori() { return response()->json(DB::table('kategori')->orderBy('nama_kategori')->get()); }
     public function stok() { return response()->json(DB::table('menu')->select('id_menu', 'nama_menu', 'stok', 'batas_minimum', 'status')->get()); }
     public function stokMenipis() { return response()->json(DB::table('menu')->select('id_menu', 'nama_menu', 'stok', 'batas_minimum', 'status')->whereColumn('stok', '<=', 'batas_minimum')->get()); }
-    public function laporan() { return response()->json(['pendapatan'=>DB::table('pembayaran')->sum('total'),'transaksi'=>DB::table('pembayaran')->distinct('id_pesanan')->count('id_pesanan')]); }
+    public function laporan()
+    {
+        $payments = DB::table('pembayaran')->where(function ($query) {
+            $query->whereNull('status_pembayaran')
+                ->orWhere('status_pembayaran', 'TERKONFIRMASI');
+        });
+
+        return response()->json([
+            'pendapatan' => (clone $payments)->sum('total'),
+            'transaksi' => $payments->distinct('id_pesanan')->count('id_pesanan'),
+        ]);
+    }
 
     private function categoryLabel(string $name): string
     {

@@ -36,7 +36,12 @@ class KasirController extends Controller
             'jumlah_pesanan' => $jumlahPesanan,
             'pending_payment' => $pending,
             'completed_orders' => $selesai,
-            'completed_income' => (float) DB::table('pembayaran')->sum('total'),
+            'completed_income' => (float) DB::table('pembayaran')
+                ->where(function ($query) {
+                    $query->whereNull('status_pembayaran')
+                        ->orWhere('status_pembayaran', 'TERKONFIRMASI');
+                })
+                ->sum('total'),
             'recent_orders' => $pesananTerbaru,
         ]);
     }
@@ -91,7 +96,8 @@ class KasirController extends Controller
                 'pesanan.*',
                 'meja.nomor_meja',
                 'pembayaran.bayar as uang_dibayar',
-                'pembayaran.kembalian'
+                'pembayaran.kembalian',
+                'pembayaran.status_pembayaran'
             )
             ->whereRaw('LOWER(pesanan.nama_pelanggan) LIKE ?', ['%'.$name.'%'])
             ->orderByDesc('pesanan.tanggal');
@@ -140,7 +146,8 @@ class KasirController extends Controller
             'pesanan.*',
             'meja.nomor_meja',
             'pembayaran.bayar as uang_dibayar',
-            'pembayaran.kembalian'
+            'pembayaran.kembalian',
+            'pembayaran.status_pembayaran'
         )
         ->where('pesanan.order_id', $orderId)
         ->first();
@@ -240,6 +247,31 @@ public function verify(Request $request, string $orderId)
             ]);
         } elseif ($metodePembayaran === 'QRIS') {
             // QRIS pada mode demo hanya mensimulasikan pemindaian, bukan transaksi uang.
+        } elseif ($metodePembayaran === 'TRANSFER') {
+            $payment = DB::table('pembayaran')
+                ->where('id_pesanan', $order->id_pesanan)
+                ->lockForUpdate()
+                ->first();
+
+            $paymentData = [
+                'metode_pembayaran' => 'TRANSFER',
+                'bayar' => $total,
+                'kembalian' => 0,
+                'subtotal' => $subtotal,
+                'total' => $total,
+                'status_pembayaran' => 'TERKONFIRMASI',
+            ];
+
+            if ($payment) {
+                DB::table('pembayaran')
+                    ->where('id_pesanan', $order->id_pesanan)
+                    ->update($paymentData);
+            } else {
+                DB::table('pembayaran')->insert($paymentData + [
+                    'id_pesanan' => $order->id_pesanan,
+                    'tanggal' => now(),
+                ]);
+            }
         } else {
             throw ValidationException::withMessages([
                 'metode_pembayaran' => 'Metode pembayaran tidak dikenali.',

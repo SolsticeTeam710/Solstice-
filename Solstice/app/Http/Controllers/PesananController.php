@@ -14,7 +14,7 @@ public function store(Request $request)
 {
     $data = $request->validate([
         'nama_pelanggan' => ['required', 'string', 'max:100'],
-        'metode_pembayaran' => ['required', 'in:CASH,QRIS'],
+        'metode_pembayaran' => ['required', 'in:CASH,QRIS,TRANSFER'],
         'catatan' => ['nullable', 'string', 'max:1000'],
         'items' => ['required', 'array', 'min:1'],
         'items.*.id_menu' => ['required', 'integer', 'distinct'],

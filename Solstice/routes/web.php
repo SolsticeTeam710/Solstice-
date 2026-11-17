@@ -87,7 +87,6 @@ Route::get('/csrf-token', fn () => response()
 Route::post('/api/pesanan', [PesananController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('api.pesanan.store');
-
 Route::middleware(['auth', 'role:kasir,admin'])
     ->prefix('api/kasir')
     ->group(function () {

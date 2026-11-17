@@ -108,12 +108,16 @@
                                     <strong><svg class="payment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M7 9h.01M17 15h.01"/></svg> Tunai</strong>
                                     <small>Bayar di kasir</small>
                                 </button>
+                                <button type="button" class="payment-option" data-payment="TRANSFER" aria-pressed="false">
+                                    <strong><svg class="payment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M7 9h.01M17 15h.01"/></svg> Transfer</strong>
+                                    <small>Bayar melalui transfer bank</small>
+                                </button>
                                 <button type="button" class="payment-option" data-payment="QRIS" aria-pressed="false">
                                     <strong><svg class="payment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path d="M9 9h2v2H9zM14 9h2v2h-2zM9 14h2v2H9zM14 14h2v2h-2z"/></svg> QRIS</strong>
                                     <small>Simulasi: pindai QRIS dengan kamera</small>
                                 </button>
                             </div>
-                            <div class="notice">Saat konfirmasi, kamera akan memindai QRIS dari perangkat lain. Pemindaian ini tidak memproses pembayaran uang nyata.</div>
+                            <div class="notice" id="payment-method-note">Pembayaran tunai dilakukan di kasir.</div>
                         </section>
                     </div>
 
@@ -151,6 +155,19 @@
                     </div>
                     <div class="notice text-left" id="success-qris-note" hidden>
                         QRIS berhasil dipindai. Ini hanya simulasi dan tidak memproses pembayaran uang nyata. Tunjukkan Order ID kepada kasir untuk melanjutkan pesanan.
+                    </div>
+                    <div class="notice text-left" id="success-transfer-note" hidden>
+                        <strong>Instruksi pembayaran transfer</strong>
+                        @if (config('services.solstice_transfer.account_number') && config('services.solstice_transfer.account_holder'))
+                            <p>Silakan transfer ke rekening berikut:</p>
+                            <p>Bank: <strong>{{ config('services.solstice_transfer.bank', 'BRI') }}</strong><br>
+                                Nomor rekening: <strong>{{ config('services.solstice_transfer.account_number') }}</strong><br>
+                                Atas nama: <strong>{{ config('services.solstice_transfer.account_holder') }}</strong></p>
+                        @else
+                            <p>Silakan hubungi kasir untuk mendapatkan nomor rekening tujuan transfer.</p>
+                        @endif
+                        <p>Jumlah transfer: <strong id="transfer-amount-label">Rp 0</strong></p>
+                        <p>Berikan Order ID ini kepada kasir setelah transfer. Kasir akan memeriksa pembayaran dan mengonfirmasinya secara manual.</p>
                     </div>
                     <p class="page-desc">Estimasi penyajian 10–15 menit setelah pesanan dikonfirmasi oleh kasir.</p>
                     <button class="primary success-action" data-page="tracking">Lihat Status Pesanan</button>

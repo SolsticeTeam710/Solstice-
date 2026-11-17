@@ -428,7 +428,7 @@ body {
 }
 .payment-options {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 .payment-option {
@@ -756,6 +756,7 @@ body {
   .queue { gap: 8px; }
   .queue div { min-width: 0; padding: 11px 13px; }
   .queue strong { font-size: 17px; }
+  .payment-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .payment-options { gap: 7px; }
   .payment-option { padding: 11px 9px; }
 }

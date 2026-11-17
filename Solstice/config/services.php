@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'solstice_transfer' => [
+        'bank' => env('SOLSTICE_TRANSFER_BANK', 'BRI'),
+        'account_number' => env('SOLSTICE_TRANSFER_ACCOUNT_NUMBER'),
+        'account_holder' => env('SOLSTICE_TRANSFER_ACCOUNT_HOLDER'),
+    ],
+
 ];
