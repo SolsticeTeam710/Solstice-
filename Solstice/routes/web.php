@@ -40,6 +40,7 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('/menu', [AdminController::class, 'menus'])->name('menus');
         Route::post('/menu', [AdminController::class, 'storeMenu'])->name('menus.store');
         Route::put('/menu/{id}', [AdminController::class, 'updateMenu'])->name('menus.update');
+        Route::patch('/menu/{id}/status', [AdminController::class, 'toggleMenuStatus'])->name('menus.status');
         Route::delete('/menu/{id}', [AdminController::class, 'deleteMenu'])->name('menus.delete');
 
         Route::post('/kategori', [AdminController::class, 'storeCategory'])
@@ -71,8 +72,10 @@ Route::middleware(['auth', 'role:kasir'])->group(function () {
         ->name('kasir.dashboard');
 });
 
-Route::get('/menu', [MenuController::class, 'index'])->name('pelanggan.menu');
-Route::get('/pesan', fn () => view('pelanggan.menu'))->name('pelanggan.pesan');
+Route::get('/api/menu', [MenuController::class, 'index'])->name('api.menu');
+Route::view('/menu', 'pelanggan.menu')->name('pelanggan.menu');
+Route::view('/pesan', 'pelanggan.menu')->name('pelanggan.pesan');
+Route::view('/pelanggan', 'pelanggan.menu')->name('pelanggan.order');
 Route::get('/qris', fn () => view('pelanggan.qris'))->name('pelanggan.qris');
 Route::get('/qris/scan', fn () => response()->json([
     'simulation' => true,
@@ -87,6 +90,7 @@ Route::get('/csrf-token', fn () => response()
 Route::post('/api/pesanan', [PesananController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('api.pesanan.store');
+
 Route::middleware(['auth', 'role:kasir,admin'])
     ->prefix('api/kasir')
     ->group(function () {
@@ -95,6 +99,7 @@ Route::middleware(['auth', 'role:kasir,admin'])
         Route::get('/orders/search', [KasirController::class, 'searchByCustomer']);
         Route::get('/orders/{orderId}', [KasirController::class, 'search']);
         Route::put('/orders/{orderId}/verify', [KasirController::class, 'verify']);
+        Route::put('/orders/{orderId}/reject', [KasirController::class, 'reject']);
     });
 
 Route::middleware(['auth', 'role:admin'])

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
@@ -17,26 +18,21 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
-        $labels = ['Mon'=>'Sen','Tue'=>'Sel','Wed'=>'Rab','Thu'=>'Kam','Fri'=>'Jum','Sat'=>'Sab','Sun'=>'Min'];
-        $firstDay = Carbon::today()->subDays(6);
+        $firstDay = Carbon::today()->subMonths(2);
         $today = Carbon::today();
         $version = Cache::get('admin.metrics.version', '0');
         $metrics = Cache::remember("admin.dashboard.metrics.{$version}", now()->addSeconds(15), function () use ($firstDay, $today) {
             $dailySales = DB::table('pembayaran')->select(DB::raw('DATE(tanggal) as hari'),DB::raw('SUM(total) as total'))
-                ->where(function ($query) {
-                    $query->whereNull('status_pembayaran')
-                        ->orWhere('status_pembayaran', 'TERKONFIRMASI');
-                })
                 ->where('tanggal', '>=', $firstDay->copy()->startOfDay())
                 ->where('tanggal', '<', $today->copy()->addDay()->startOfDay())
                 ->groupBy(DB::raw('DATE(tanggal)'))->pluck('total','hari')->all();
-            $menuStats = DB::table('menu')
-                ->selectRaw(
-                    'COUNT(*) AS total, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) AS active, '
-                    . 'SUM(CASE WHEN COALESCE(stok, 0) <= COALESCE(batas_minimum, 0) THEN 1 ELSE 0 END) AS low_stock',
-                    ['tersedia']
-                )
-                ->first();
+            $menuStats = [
+                'total' => DB::table('menu')->count(),
+                'active' => DB::table('menu')->where('is_active', true)->count(),
+                'low_stock' => DB::table('menu')
+                    ->whereRaw('COALESCE(stok, 0) <= COALESCE(batas_minimum, 0)')
+                    ->count(),
+            ];
             $userStats = DB::table('users')
                 ->selectRaw(
                     "COUNT(*) AS total, SUM(CASE WHEN role = 'admin' THEN 1 ELSE 0 END) AS admins, "
@@ -52,8 +48,21 @@ class AdminController extends Controller
         });
         $dailySales = $metrics['daily_sales'];
         $weekly = [];
-        for ($day = $firstDay->copy(); $day->lte($today); $day->addDay()) {
-            $weekly[] = [$labels[$day->format('D')], ((float)($dailySales[$day->toDateString()] ?? 0)) / 1000000];
+        for ($weekStart = $firstDay->copy(); $weekStart->lte($today); $weekStart->addDays(7)) {
+            $weekEnd = $weekStart->copy()->addDays(6);
+            if ($weekEnd->gt($today)) {
+                $weekEnd = $today->copy();
+            }
+
+            $weekTotal = 0.0;
+            for ($day = $weekStart->copy(); $day->lte($weekEnd); $day->addDay()) {
+                $weekTotal += (float) ($dailySales[$day->toDateString()] ?? 0);
+            }
+
+            $weekly[] = [
+                $weekStart->format('d M') . '–' . $weekEnd->format('d M'),
+                $weekTotal / 1000000,
+            ];
         }
         $todayRevenue = (float) ($dailySales[$today->toDateString()] ?? 0);
         $menuStats = $metrics['menu_stats'];
@@ -65,7 +74,7 @@ class AdminController extends Controller
         $adminTotal = (int) ($userStats['admins'] ?? 0);
         $cashierTotal = (int) ($userStats['cashiers'] ?? 0);
         $stats = [
-            ['Total Varian Menu', $menuTotal.' Menu', 'text-brand', $activeMenus.' menu tersedia', 'text-ok', false],
+            ['Total Varian Menu', $menuTotal.' Menu', 'text-brand', $activeMenus.' menu aktif', 'text-ok', false],
             ['Total Pengguna (Staf)', $userTotal.' User', 'text-brand', $adminTotal.' Admin · '.$cashierTotal.' Kasir', 'text-muted', false],
             ['Penjualan Hari Ini', 'Rp '.number_format($todayRevenue,0,',','.'), 'text-brand', 'Total pembayaran hari ini', 'text-ok', false],
             ['Stok Menipis', $lowStock.' Menu', 'text-warn', $lowStock ? 'Perlu diperiksa' : 'Semua stok aman', 'text-muted', true],
@@ -105,6 +114,8 @@ class AdminController extends Controller
         }
         $menus = $query->orderBy('menu.nama_menu')->get()->map(fn ($item) => [
             'id' => $item->id_menu, 'nama' => $item->nama_menu, 'kategori_id' => $item->id_kategori,
+            'foto' => $item->foto,
+            'foto_url' => $this->menuPhotoUrl($item->foto, $item->nama_menu),
             'kategori' => $item->nama_kategori
                 ? $this->categoryLabel($item->nama_kategori)
                 : 'Tanpa kategori',
@@ -112,7 +123,10 @@ class AdminController extends Controller
             'stok' => $item->stok,
             'minimum' => $item->batas_minimum,
             'deskripsi' => $item->deskripsi,
-            'aktif' => $item->status === 'tersedia',
+            'aktif' => (bool) $item->is_active,
+            'status_tampilan' => ! (bool) $item->is_active
+                ? 'Tidak tersedia'
+                : (((int) $item->stok <= 0 || $item->status === 'habis') ? 'Habis' : 'Tersedia'),
         ])->all();
         return view('admin.menus', compact('menus', 'categories'));
     }
@@ -124,9 +138,18 @@ class AdminController extends Controller
             'id_kategori' => ['required','integer',Rule::exists('kategori','id_kategori')],
             'harga' => ['required','numeric','min:0'], 'stok' => ['required','integer','min:0'],
             'batas_minimum' => ['nullable','integer','min:0'], 'deskripsi' => ['nullable','string','max:2000'],
+            'foto' => ['nullable','image','mimes:jpg,jpeg,png,webp','max:2048'],
         ]);
         $data['batas_minimum'] = $data['batas_minimum'] ?? 0;
-        DB::table('menu')->insert($data + ['status' => $data['stok'] > 0 ? 'tersedia' : 'habis']);
+        if ($request->hasFile('foto')) {
+            $data['foto'] = $request->file('foto')->store('menu', 'public');
+        } else {
+            unset($data['foto']);
+        }
+        DB::table('menu')->insert($data + [
+            'status' => $data['stok'] > 0 ? 'tersedia' : 'habis',
+            'is_active' => true,
+        ]);
         $this->invalidateAdminMetrics();
         return back()->with('success', 'Menu berhasil ditambahkan.');
     }
@@ -138,18 +161,48 @@ class AdminController extends Controller
             'id_kategori' => ['required','integer',Rule::exists('kategori','id_kategori')],
             'harga' => ['required','numeric','min:0'], 'stok' => ['required','integer','min:0'],
             'batas_minimum' => ['nullable','integer','min:0'], 'deskripsi' => ['nullable','string','max:2000'],
+            'foto' => ['nullable','image','mimes:jpg,jpeg,png,webp','max:2048'],
         ]);
 
-        if (! DB::table('menu')->where('id_menu', $id)->exists()) {
+        $existingMenu = DB::table('menu')->where('id_menu', $id)->first();
+        if (! $existingMenu) {
             return back()->with('error', 'Menu tidak ditemukan.');
         }
 
         $data['batas_minimum'] = $data['batas_minimum'] ?? 0;
+        if ($request->hasFile('foto')) {
+            $newPhotoPath = $request->file('foto')->store('menu', 'public');
+            if ($newPhotoPath) {
+                $data['foto'] = $newPhotoPath;
+            }
+        } else {
+            unset($data['foto']);
+        }
         DB::table('menu')->where('id_menu', $id)->update($data + ['status' => $data['stok'] > 0 ? 'tersedia' : 'habis']);
+        if (! empty($newPhotoPath) && is_string($existingMenu->foto) && str_starts_with($existingMenu->foto, 'menu/')) {
+            Storage::disk('public')->delete($existingMenu->foto);
+        }
         $this->invalidateAdminMetrics();
 
         return back()->with('success', 'Menu berhasil diperbarui.');
     }
+
+    public function toggleMenuStatus(int $id)
+    {
+        $menu = DB::table('menu')->where('id_menu', $id)->first();
+        if (! $menu) {
+            return back()->with('error', 'Menu tidak ditemukan.');
+        }
+
+        $isActive = ! (bool) $menu->is_active;
+        DB::table('menu')->where('id_menu', $id)->update(['is_active' => $isActive]);
+        $this->invalidateAdminMetrics();
+
+        return back()->with('success', $isActive
+            ? 'Menu berhasil diaktifkan.'
+            : 'Menu berhasil dinonaktifkan.');
+    }
+
     public function deleteMenu(int $id)
     {
         if (Schema::hasTable('detail_pesanan') && DB::table('detail_pesanan')->where('id_menu', $id)->exists()) {
@@ -358,69 +411,154 @@ class AdminController extends Controller
 
     public function reportsPage(Request $request)
     {
-        $request->validate(['dari'=>['nullable','date'],'sampai'=>['nullable','date','after_or_equal:dari']]);
-        $start = $request->query('dari', now()->startOfWeek()->toDateString());
-        $end = $request->query('sampai', now()->toDateString());
+        $data = $request->validate([
+            'dari' => ['nullable', 'date'],
+            'sampai' => ['nullable', 'date', 'after_or_equal:dari'],
+            'metode_pembayaran' => ['nullable', Rule::in(['CASH', 'QRIS'])],
+        ]);
+
+        $start = $data['dari'] ?? now()->subMonths(2)->toDateString();
+        $end = $data['sampai'] ?? now()->toDateString();
+        $method = $data['metode_pembayaran'] ?? null;
         $startAt = Carbon::parse($start)->startOfDay();
         $endExclusive = Carbon::parse($end)->addDay()->startOfDay();
 
         $version = Cache::get('admin.metrics.version', '0');
-        $cacheKey = 'admin.reports.' . $version . '.' . md5($start . '|' . $end);
-        $report = Cache::remember($cacheKey, now()->addSeconds(30), function () use ($startAt, $endExclusive) {
-            $summary = DB::table('pembayaran')
-                ->join('pesanan', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
-                ->where(function ($query) {
-                    $query->whereNull('pembayaran.status_pembayaran')
-                        ->orWhere('pembayaran.status_pembayaran', 'TERKONFIRMASI');
-                })
-                ->where('pembayaran.tanggal', '>=', $startAt)
-                ->where('pembayaran.tanggal', '<', $endExclusive)
-                ->selectRaw(
-                    'COALESCE(SUM(pembayaran.total), 0) AS revenue, COUNT(DISTINCT pesanan.id_pesanan) AS transactions'
-                )
-                ->selectSub(function ($query) use ($startAt, $endExclusive) {
-                    $query->from('detail_pesanan')
-                        ->join('pesanan as orders_for_cups', 'detail_pesanan.id_pesanan', '=', 'orders_for_cups.id_pesanan')
-                        ->where('orders_for_cups.tanggal', '>=', $startAt)
-                        ->where('orders_for_cups.tanggal', '<', $endExclusive)
-                        ->selectRaw('COALESCE(SUM(detail_pesanan.jumlah_pesanan), 0)');
-                }, 'cups')
+        $cacheKey = 'admin.reports.' . $version . '.' . md5($start . '|' . $end . '|' . ($method ?? 'ALL'));
+        $report = Cache::remember($cacheKey, now()->addSeconds(30), function () use ($startAt, $endExclusive, $method) {
+            $paymentQuery = DB::table('pembayaran')
+                ->where('tanggal', '>=', $startAt)
+                ->where('tanggal', '<', $endExclusive);
+            if ($method) {
+                $paymentQuery->where('metode_pembayaran', $method);
+            }
+
+            $summary = (clone $paymentQuery)
+                ->selectRaw('COALESCE(SUM(total), 0) AS revenue, COUNT(DISTINCT id_pesanan) AS transactions')
                 ->first();
-            $top = DB::table('detail_pesanan')->join('pesanan','detail_pesanan.id_pesanan','=','pesanan.id_pesanan')
-                ->join('menu','detail_pesanan.id_menu','=','menu.id_menu')->join('kategori','menu.id_kategori','=','kategori.id_kategori')
-                ->where('pesanan.tanggal', '>=', $startAt)
-                ->where('pesanan.tanggal', '<', $endExclusive)
-                ->select('menu.nama_menu','kategori.nama_kategori',DB::raw('SUM(detail_pesanan.jumlah_pesanan) as terjual'),DB::raw('SUM(detail_pesanan.subtotal) as omzet'))
-                ->groupBy('menu.nama_menu','kategori.nama_kategori')->orderByDesc('terjual')->limit(5)->get()
-                ->map(fn($row)=>['nama'=>$row->nama_menu,'kategori'=>$row->nama_kategori,'terjual'=>$row->terjual,'omzet'=>$row->omzet])->all();
-            $daily = DB::table('pembayaran')->select(DB::raw('DATE(tanggal) as hari'),DB::raw('SUM(total) as total'))
-                ->where(function ($query) {
-                    $query->whereNull('status_pembayaran')
-                        ->orWhere('status_pembayaran', 'TERKONFIRMASI');
-                })
+
+            $cupsQuery = DB::table('detail_pesanan')
+                ->join('pesanan', 'detail_pesanan.id_pesanan', '=', 'pesanan.id_pesanan')
+                ->join('pembayaran', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+                ->where('pembayaran.tanggal', '>=', $startAt)
+                ->where('pembayaran.tanggal', '<', $endExclusive);
+            if ($method) {
+                $cupsQuery->where('pembayaran.metode_pembayaran', $method);
+            }
+            $cups = (int) $cupsQuery->sum('detail_pesanan.jumlah_pesanan');
+
+            $topQuery = DB::table('detail_pesanan')
+                ->join('pesanan', 'detail_pesanan.id_pesanan', '=', 'pesanan.id_pesanan')
+                ->join('pembayaran', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+                ->join('menu', 'detail_pesanan.id_menu', '=', 'menu.id_menu')
+                ->leftJoin('kategori', 'menu.id_kategori', '=', 'kategori.id_kategori')
+                ->where('pembayaran.tanggal', '>=', $startAt)
+                ->where('pembayaran.tanggal', '<', $endExclusive);
+            if ($method) {
+                $topQuery->where('pembayaran.metode_pembayaran', $method);
+            }
+            $top = $topQuery
+                ->select(
+                    'menu.nama_menu',
+                    'kategori.nama_kategori',
+                    DB::raw('SUM(detail_pesanan.jumlah_pesanan) as terjual'),
+                    DB::raw('SUM(detail_pesanan.subtotal) as omzet')
+                )
+                ->groupBy('menu.nama_menu', 'kategori.nama_kategori')
+                ->orderByDesc('terjual')
+                ->limit(5)
+                ->get()
+                ->map(fn ($row) => [
+                    'nama' => $row->nama_menu,
+                    'kategori' => $row->nama_kategori ?? 'Tanpa kategori',
+                    'terjual' => (int) $row->terjual,
+                    'omzet' => (float) $row->omzet,
+                ])
+                ->all();
+
+            $dailyRows = (clone $paymentQuery)
+                ->select(DB::raw('DATE(tanggal) as hari'), DB::raw('SUM(total) as total'))
+                ->groupBy(DB::raw('DATE(tanggal)'))
+                ->orderBy('hari')
+                ->get();
+            $dailyTotals = [];
+            foreach ($dailyRows as $row) {
+                $dailyTotals[(string) $row->hari] = (float) $row->total;
+            }
+
+            $lastDate = $endExclusive->copy()->subDay();
+            $weekly = [];
+            for ($bucketStart = $startAt->copy(); $bucketStart->lte($lastDate); $bucketStart->addDays(7)) {
+                $bucketEnd = $bucketStart->copy()->addDays(6);
+                if ($bucketEnd->gt($lastDate)) {
+                    $bucketEnd = $lastDate->copy();
+                }
+
+                $bucketTotal = 0.0;
+                for ($day = $bucketStart->copy(); $day->lte($bucketEnd); $day->addDay()) {
+                    $bucketTotal += $dailyTotals[$day->toDateString()] ?? 0;
+                }
+
+                $weekly[] = [
+                    $bucketStart->format('d/m') . '–' . $bucketEnd->format('d/m'),
+                    $bucketTotal,
+                ];
+            }
+
+            $methodRows = DB::table('pembayaran')
                 ->where('tanggal', '>=', $startAt)
                 ->where('tanggal', '<', $endExclusive)
-                ->groupBy(DB::raw('DATE(tanggal)'))->orderBy('hari')->get()
-                ->map(fn($row)=>[date('D',strtotime($row->hari)),(float)$row->total])->all();
+                ->select(
+                    'metode_pembayaran',
+                    DB::raw('COUNT(*) as transactions'),
+                    DB::raw('COALESCE(SUM(total), 0) as revenue')
+                )
+                ->groupBy('metode_pembayaran')
+                ->get();
+            $paymentSummary = [
+                'CASH' => ['transactions' => 0, 'revenue' => 0.0],
+                'QRIS' => ['transactions' => 0, 'revenue' => 0.0],
+            ];
+            foreach ($methodRows as $row) {
+                $key = strtoupper((string) $row->metode_pembayaran);
+                $paymentSummary[$key] = [
+                    'transactions' => (int) $row->transactions,
+                    'revenue' => (float) $row->revenue,
+                ];
+            }
 
             return [
                 'revenue' => (float) ($summary->revenue ?? 0),
                 'transactions' => (int) ($summary->transactions ?? 0),
-                'cups' => (int) ($summary->cups ?? 0),
+                'cups' => $cups,
                 'top' => $top,
-                'weekly' => $daily,
+                'weekly' => $weekly,
+                'payment_summary' => $paymentSummary,
             ];
         });
 
         $revenue = $report['revenue'];
         $transactions = $report['transactions'];
         $cups = $report['cups'];
-        $top = $report['top'];
+        $popular = $report['top'];
         $weekly = $report['weekly'];
-        $dailyAverage = $transactions ? $revenue / max(1, Carbon::parse($start)->diffInDays(Carbon::parse($end)) + 1) : 0;
-        if (! $weekly) $weekly = [['- ',0]];
-        $popular = $top;
-        return view('admin.reports', compact('weekly','popular','revenue','transactions','cups','start','end','dailyAverage'));
+        $paymentSummary = $report['payment_summary'];
+        $dailyAverage = $transactions
+            ? $revenue / max(1, Carbon::parse($start)->diffInDays(Carbon::parse($end)) + 1)
+            : 0;
+
+        return view('admin.reports', compact(
+            'weekly',
+            'popular',
+            'revenue',
+            'transactions',
+            'cups',
+            'start',
+            'end',
+            'dailyAverage',
+            'method',
+            'paymentSummary'
+        ));
     }
 
     private function invalidateAdminMetrics(): void
@@ -428,55 +566,142 @@ class AdminController extends Controller
         Cache::forever('admin.metrics.version', (string) Str::uuid());
     }
 
+    private function reportOrderNumber(string $orderId): string
+    {
+        if (! str_starts_with($orderId, 'DEMO-TREND-')) {
+            return $orderId;
+        }
+
+        return 'ORD-' . strtoupper(substr(hash('sha256', $orderId), 0, 12));
+    }
+    private function paymentSummaryForPeriod(string $start, string $end): array
+    {
+        $summary = [
+            'CASH' => ['transactions' => 0, 'revenue' => 0.0],
+            'QRIS' => ['transactions' => 0, 'revenue' => 0.0],
+        ];
+
+        $rows = DB::table('pembayaran')
+            ->whereBetween(DB::raw('DATE(tanggal)'), [$start, $end])
+            ->select(
+                'metode_pembayaran',
+                DB::raw('COUNT(*) as transactions'),
+                DB::raw('COALESCE(SUM(total), 0) as revenue')
+            )
+            ->groupBy('metode_pembayaran')
+            ->get();
+
+        foreach ($rows as $row) {
+            $key = strtoupper(trim((string) $row->metode_pembayaran));
+            if (! array_key_exists($key, $summary)) {
+                continue;
+            }
+
+            $summary[$key] = [
+                'transactions' => (int) $row->transactions,
+                'revenue' => (float) $row->revenue,
+            ];
+        }
+
+        return $summary;
+    }
     public function downloadReport(Request $request)
     {
-        $request->validate(['dari'=>['nullable','date'],'sampai'=>['nullable','date','after_or_equal:dari']]);
-        $start = $request->query('dari', now()->startOfWeek()->toDateString());
-        $end = $request->query('sampai', now()->toDateString());
-        $rows = DB::table('pembayaran')->join('pesanan','pembayaran.id_pesanan','=','pesanan.id_pesanan')
-            ->where(function ($query) {
-                $query->whereNull('pembayaran.status_pembayaran')
-                    ->orWhere('pembayaran.status_pembayaran', 'TERKONFIRMASI');
-            })
-            ->whereBetween(DB::raw('DATE(pembayaran.tanggal)'),[$start,$end])
-            ->select('pesanan.id_pesanan','pesanan.tanggal','pembayaran.metode_pembayaran','pembayaran.total')->orderBy('pesanan.tanggal')->get();
-        return response()->streamDownload(function () use ($rows) {
-            $out = fopen('php://output','w');
-            fputcsv($out,['ID Pesanan','Tanggal','Metode Pembayaran','Total']);
-            foreach ($rows as $row) fputcsv($out,[$row->id_pesanan,$row->tanggal,$row->metode_pembayaran,$row->total]);
+        $data = $request->validate([
+            'dari' => ['nullable', 'date'],
+            'sampai' => ['nullable', 'date', 'after_or_equal:dari'],
+            'metode_pembayaran' => ['nullable', Rule::in(['CASH', 'QRIS'])],
+        ]);
+        $start = $data['dari'] ?? now()->subMonths(2)->toDateString();
+        $end = $data['sampai'] ?? now()->toDateString();
+        $method = $data['metode_pembayaran'] ?? null;
+
+        $query = DB::table('pembayaran')
+            ->join('pesanan', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->whereBetween(DB::raw('DATE(pembayaran.tanggal)'), [$start, $end]);
+        if ($method) {
+            $query->where('pembayaran.metode_pembayaran', $method);
+        }
+        $rows = $query
+            ->select('pesanan.order_id', 'pesanan.tanggal', 'pembayaran.metode_pembayaran', 'pembayaran.total')
+            ->orderBy('pembayaran.tanggal')
+            ->get()
+            ->map(function ($row) {
+                $row->order_id = $this->reportOrderNumber((string) $row->order_id);
+                return $row;
+            });
+        $paymentSummary = $this->paymentSummaryForPeriod($start, $end);
+        $revenue = (float) $rows->sum('total');
+        $transactions = $rows->count();
+        $methodLabel = $method === 'CASH' ? 'Tunai' : ($method ?: 'Semua metode');
+
+        return response()->streamDownload(function () use ($rows, $paymentSummary, $start, $end, $revenue, $transactions, $methodLabel) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Laporan Penjualan Solstice Coffee']);
+            fputcsv($out, ['Periode', $start, $end]);
+            fputcsv($out, ['Filter metode', $methodLabel]);
+            fputcsv($out, []);
+            fputcsv($out, ['Ringkasan Metode Pembayaran']);
+            fputcsv($out, ['Metode Pembayaran', 'Jumlah Transaksi', 'Total Pendapatan']);
+            foreach ($paymentSummary as $key => $summary) {
+                $label = $key === 'CASH' ? 'Tunai' : $key;
+                fputcsv($out, [$label, $summary['transactions'], $summary['revenue']]);
+            }
+            fputcsv($out, []);
+            fputcsv($out, ['Total Pendapatan sesuai filter', $revenue]);
+            fputcsv($out, ['Jumlah Transaksi sesuai filter', $transactions]);
+            fputcsv($out, []);
+            fputcsv($out, ['Rincian Transaksi']);
+            fputcsv($out, ['No. Pesanan', 'Tanggal', 'Metode Pembayaran', 'Total']);
+            foreach ($rows as $row) {
+                fputcsv($out, [$row->order_id, $row->tanggal, $row->metode_pembayaran, $row->total]);
+            }
             fclose($out);
-        }, 'laporan-penjualan.csv', ['Content-Type'=>'text/csv; charset=UTF-8']);
+        }, 'laporan-penjualan.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function exportPage(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'dari' => ['nullable', 'date'],
             'sampai' => ['nullable', 'date', 'after_or_equal:dari'],
+            'metode_pembayaran' => ['nullable', Rule::in(['CASH', 'QRIS'])],
         ]);
 
-        $start = $request->query('dari', now()->startOfWeek()->toDateString());
-        $end = $request->query('sampai', now()->toDateString());
+        $start = $data['dari'] ?? now()->subMonths(2)->toDateString();
+        $end = $data['sampai'] ?? now()->toDateString();
+        $method = $data['metode_pembayaran'] ?? null;
 
-        $rows = DB::table('pembayaran')
+        $rowsQuery = DB::table('pembayaran')
             ->join('pesanan', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
-            ->where(function ($query) {
-                $query->whereNull('pembayaran.status_pembayaran')
-                    ->orWhere('pembayaran.status_pembayaran', 'TERKONFIRMASI');
-            })
-            ->whereBetween(DB::raw('DATE(pembayaran.tanggal)'), [$start, $end])
+            ->whereBetween(DB::raw('DATE(pembayaran.tanggal)'), [$start, $end]);
+        if ($method) {
+            $rowsQuery->where('pembayaran.metode_pembayaran', $method);
+        }
+        $rows = $rowsQuery
             ->select('pesanan.order_id', 'pesanan.tanggal', 'pembayaran.metode_pembayaran', 'pembayaran.total')
             ->orderBy('pembayaran.tanggal')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                $row->order_id = $this->reportOrderNumber((string) $row->order_id);
+                return $row;
+            });
+        $paymentSummary = $this->paymentSummaryForPeriod($start, $end);
 
         $revenue = (float) $rows->sum('total');
         $transactions = $rows->count();
-        $cups = DB::table('detail_pesanan')
-            ->join('pesanan', 'detail_pesanan.id_pesanan', '=', 'pesanan.id_pesanan')
-            ->whereBetween(DB::raw('DATE(pesanan.tanggal)'), [$start, $end])
-            ->sum('detail_pesanan.jumlah_pesanan');
 
-        return view('admin.export', compact('start', 'end', 'rows', 'revenue', 'transactions', 'cups'));
+        $cupsQuery = DB::table('detail_pesanan')
+            ->join('pesanan', 'detail_pesanan.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->join('pembayaran', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->whereBetween(DB::raw('DATE(pembayaran.tanggal)'), [$start, $end]);
+        if ($method) {
+            $cupsQuery->where('pembayaran.metode_pembayaran', $method);
+        }
+        $cups = (int) $cupsQuery->sum('detail_pesanan.jumlah_pesanan');
+
+        return view('admin.export', compact('start', 'end', 'rows', 'revenue', 'transactions', 'cups', 'method', 'paymentSummary'));
     }
 
     public function users() { $columns = array_values(array_diff(Schema::getColumnListing('users'),['password','remember_token'])); return response()->json(DB::table('users')->select($columns)->get()); }
@@ -492,19 +717,46 @@ class AdminController extends Controller
     public function kategori() { return response()->json(DB::table('kategori')->orderBy('nama_kategori')->get()); }
     public function stok() { return response()->json(DB::table('menu')->select('id_menu', 'nama_menu', 'stok', 'batas_minimum', 'status')->get()); }
     public function stokMenipis() { return response()->json(DB::table('menu')->select('id_menu', 'nama_menu', 'stok', 'batas_minimum', 'status')->whereColumn('stok', '<=', 'batas_minimum')->get()); }
-    public function laporan()
+    public function laporan() { return response()->json(['pendapatan'=>DB::table('pembayaran')->sum('total'),'transaksi'=>DB::table('pembayaran')->distinct('id_pesanan')->count('id_pesanan')]); }
+
+    private function menuPhotoUrl(?string $photo, string $name): ?string
     {
-        $payments = DB::table('pembayaran')->where(function ($query) {
-            $query->whereNull('status_pembayaran')
-                ->orWhere('status_pembayaran', 'TERKONFIRMASI');
-        });
+        if ($photo) {
+            $path = str_replace('\\', '/', $photo);
+            if (preg_match('~^https?://~i', $path)) {
+                return $path;
+            }
 
-        return response()->json([
-            'pendapatan' => (clone $payments)->sum('total'),
-            'transaksi' => $payments->distinct('id_pesanan')->count('id_pesanan'),
-        ]);
+            $path = ltrim((string) preg_replace('~^public/~i', '', $path), '/');
+            return str_starts_with($path, 'menu/') || str_starts_with($path, 'storage/')
+                ? asset('storage/' . ltrim(substr($path, str_starts_with($path, 'storage/') ? 8 : 0), '/'))
+                : asset($path);
+        }
+
+        $name = mb_strtolower($name);
+        $images = [
+            ['ice kopi susu aren', 'images/menu/Ice%20Kopi%20Susu%20Aren.jpeg'],
+            ['ice caramel macchiato', 'images/menu/Ice%20Caramel%20Macchiato.jpeg'],
+            ['iced caramel macchiato', 'images/menu/Ice%20Caramel%20Macchiato.jpeg'],
+            ['matcha latte', 'images/menu/matcha-latte.jpg'],
+            ['almond croissant', 'images/menu/Almond%20Croissant.jpg'],
+            ['nasi goreng', 'images/menu/Nasi%20Goreng.jpeg'],
+            ['air dingin', 'images/menu/Air%20Dingin.jpeg'],
+            ['ayam goreng', 'images/menu/ayam-goreng.jpg'],
+            ['caffe latte', 'images/menu/caffe-latte.jpg'],
+            ['cafe latte', 'images/menu/caffe-latte.jpg'],
+            ['kwetiaw', 'images/menu/Mie%20Kwetiaw.jpeg'],
+            ['kwetiau', 'images/menu/Mie%20Kwetiaw.jpeg'],
+        ];
+
+        foreach ($images as [$match, $image]) {
+            if (str_contains($name, $match)) {
+                return asset($image);
+            }
+        }
+
+        return null;
     }
-
     private function categoryLabel(string $name): string
     {
         return match (mb_strtolower($name)) {

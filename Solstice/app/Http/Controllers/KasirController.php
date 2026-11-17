@@ -15,17 +15,22 @@ class KasirController extends Controller
     {
         $pendingStatuses = ['pending', 'baru', 'menunggu pembayaran', 'menunggu', 'menunggu konfirmasi kasir'];
         $completedStatuses = ['selesai', 'done', 'completed', 'lunas'];
-        $jumlahPesanan = DB::table('pesanan')->count();
+        $jumlahPesanan = DB::table('pesanan')
+            ->where('order_id', 'not like', 'DEMO-TREND-%')
+            ->count();
 
         $pending = DB::table('pesanan')
+            ->where('order_id', 'not like', 'DEMO-TREND-%')
             ->whereIn('status', $pendingStatuses)
             ->count();
 
         $selesai = DB::table('pesanan')
+            ->where('order_id', 'not like', 'DEMO-TREND-%')
             ->whereIn('status', $completedStatuses)
             ->count();
 
         $pesananTerbaru = DB::table('pesanan')
+            ->where('pesanan.order_id', 'not like', 'DEMO-TREND-%')
             ->leftJoin('meja', 'meja.id_pesanan', '=', 'pesanan.id_pesanan')
             ->select('pesanan.*', 'meja.nomor_meja')
             ->orderBy('pesanan.tanggal', 'desc')
@@ -37,11 +42,9 @@ class KasirController extends Controller
             'pending_payment' => $pending,
             'completed_orders' => $selesai,
             'completed_income' => (float) DB::table('pembayaran')
-                ->where(function ($query) {
-                    $query->whereNull('status_pembayaran')
-                        ->orWhere('status_pembayaran', 'TERKONFIRMASI');
-                })
-                ->sum('total'),
+                ->join('pesanan', 'pembayaran.id_pesanan', '=', 'pesanan.id_pesanan')
+                ->where('pesanan.order_id', 'not like', 'DEMO-TREND-%')
+                ->sum('pembayaran.total'),
             'recent_orders' => $pesananTerbaru,
         ]);
     }
@@ -51,7 +54,8 @@ class KasirController extends Controller
     {
         $status = $request->query('status');
         $query = DB::table('pesanan')
-            ->leftJoin('meja', 'meja.id_pesanan', '=', 'pesanan.id_pesanan');
+            ->leftJoin('meja', 'meja.id_pesanan', '=', 'pesanan.id_pesanan')
+            ->where('pesanan.order_id', 'not like', 'DEMO-TREND-%');
 
         if ($status === 'pending') {
             $query->whereIn('pesanan.status', ['pending', 'baru', 'menunggu pembayaran', 'menunggu', 'menunggu konfirmasi kasir']);
@@ -96,10 +100,10 @@ class KasirController extends Controller
                 'pesanan.*',
                 'meja.nomor_meja',
                 'pembayaran.bayar as uang_dibayar',
-                'pembayaran.kembalian',
-                'pembayaran.status_pembayaran'
+                'pembayaran.kembalian'
             )
             ->whereRaw('LOWER(pesanan.nama_pelanggan) LIKE ?', ['%'.$name.'%'])
+            ->where('pesanan.order_id', 'not like', 'DEMO-TREND-%')
             ->orderByDesc('pesanan.tanggal');
 
         // Menu pencarian detail pelanggan hanya boleh mengembalikan pesanan selesai.
@@ -146,10 +150,10 @@ class KasirController extends Controller
             'pesanan.*',
             'meja.nomor_meja',
             'pembayaran.bayar as uang_dibayar',
-            'pembayaran.kembalian',
-            'pembayaran.status_pembayaran'
+            'pembayaran.kembalian'
         )
         ->where('pesanan.order_id', $orderId)
+        ->where('pesanan.order_id', 'not like', 'DEMO-TREND-%')
         ->first();
 
     if (!$pesanan) {
@@ -246,32 +250,16 @@ public function verify(Request $request, string $orderId)
                 'total' => $total,
             ]);
         } elseif ($metodePembayaran === 'QRIS') {
-            // QRIS pada mode demo hanya mensimulasikan pemindaian, bukan transaksi uang.
-        } elseif ($metodePembayaran === 'TRANSFER') {
-            $payment = DB::table('pembayaran')
-                ->where('id_pesanan', $order->id_pesanan)
-                ->lockForUpdate()
-                ->first();
-
-            $paymentData = [
-                'metode_pembayaran' => 'TRANSFER',
+            // Konfirmasi QRIS simulasi tetap dicatat agar masuk ke laporan penjualan.
+            DB::table('pembayaran')->insert([
+                'id_pesanan' => $order->id_pesanan,
+                'tanggal' => now(),
+                'metode_pembayaran' => 'QRIS',
                 'bayar' => $total,
                 'kembalian' => 0,
                 'subtotal' => $subtotal,
                 'total' => $total,
-                'status_pembayaran' => 'TERKONFIRMASI',
-            ];
-
-            if ($payment) {
-                DB::table('pembayaran')
-                    ->where('id_pesanan', $order->id_pesanan)
-                    ->update($paymentData);
-            } else {
-                DB::table('pembayaran')->insert($paymentData + [
-                    'id_pesanan' => $order->id_pesanan,
-                    'tanggal' => now(),
-                ]);
-            }
+            ]);
         } else {
             throw ValidationException::withMessages([
                 'metode_pembayaran' => 'Metode pembayaran tidak dikenali.',
@@ -294,6 +282,34 @@ public function verify(Request $request, string $orderId)
     Cache::forever('admin.metrics.version', (string) Str::uuid());
 
     return response()->json(['message' => 'Pembayaran diverifikasi.']);
+}
+
+public function reject(string $orderId)
+{
+    DB::transaction(function () use ($orderId) {
+        $order = DB::table('pesanan')
+            ->where('order_id', $orderId)
+            ->lockForUpdate()
+            ->first();
+
+        abort_if(! $order, 404, 'Pesanan tidak ditemukan.');
+        abort_unless($order->status === 'pending', 409, 'Hanya pesanan yang menunggu konfirmasi yang dapat ditolak.');
+
+        DB::table('pesanan')
+            ->where('id_pesanan', $order->id_pesanan)
+            ->update(['status' => 'ditolak']);
+
+        DB::table('meja')
+            ->where('id_pesanan', $order->id_pesanan)
+            ->update([
+                'id_pesanan' => null,
+                'status' => 'kosong',
+            ]);
+    });
+
+    Cache::forever('admin.metrics.version', (string) Str::uuid());
+
+    return response()->json(['message' => 'Pembayaran ditolak dan meja telah dikosongkan.']);
 }
 
 }

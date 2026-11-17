@@ -28,17 +28,17 @@ class CatalogSeeder extends Seeder
         }
 
         $menus = [
-            ['Ice Kopi Susu Aren','Coffee',18000,150,20],
-            ['Ice Caramel Macchiato','Coffee',24000,85,15],
-            ['Matcha Latte','Non-Coffee',22000,120,15],
-            ['Almond Croissant','Makanan',20000,12,5],
-            ['Nasi Goreng Kampung','Makanan',28000,0,5],
+            ['Ice Kopi Susu Aren','Coffee',18000,150,20,'images/menu/Ice Kopi Susu Aren.jpeg'],
+            ['Ice Caramel Macchiato','Coffee',24000,85,15,'images/menu/Ice Caramel Macchiato.jpeg'],
+            ['Matcha Latte','Non-Coffee',22000,120,15,'images/menu/matcha-latte.jpg'],
+            ['Almond Croissant','Makanan',20000,12,5,'images/menu/Almond Croissant.jpg'],
+            ['Nasi Goreng Kampung','Makanan',28000,0,5,'images/menu/Nasi Goreng.jpeg'],
         ];
-        foreach ($menus as [$name,$category,$price,$stock,$minimum]) {
+        foreach ($menus as [$name,$category,$price,$stock,$minimum,$photo]) {
             if (! DB::table('menu')->where('nama_menu',$name)->exists()) {
                 DB::table('menu')->insert([
                     'id_kategori'=>$categories[$category], 'nama_menu'=>$name, 'harga'=>$price,
-                    'stok'=>$stock, 'batas_minimum'=>$minimum, 'status'=>$stock > 0 ? 'tersedia' : 'habis',
+                    'stok'=>$stock, 'batas_minimum'=>$minimum, 'foto'=>$photo, 'status'=>$stock > 0 ? 'tersedia' : 'habis',
                 ]);
             }
         }

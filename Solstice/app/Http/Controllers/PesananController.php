@@ -14,7 +14,7 @@ public function store(Request $request)
 {
     $data = $request->validate([
         'nama_pelanggan' => ['required', 'string', 'max:100'],
-        'metode_pembayaran' => ['required', 'in:CASH,QRIS,TRANSFER'],
+        'metode_pembayaran' => ['required', 'in:CASH,QRIS'],
         'catatan' => ['nullable', 'string', 'max:1000'],
         'items' => ['required', 'array', 'min:1'],
         'items.*.id_menu' => ['required', 'integer', 'distinct'],
@@ -56,7 +56,7 @@ if (!$meja || $meja->status !== 'kosong' || $meja->id_pesanan !== null) {
             $menu = $menus->get($item['id_menu']);
             $quantity = (int) $item['jumlah_pesanan'];
 
-            if ($menu->status !== 'tersedia' || (int) $menu->stok < $quantity) {
+            if (! (bool) $menu->is_active || $menu->status !== 'tersedia' || (int) $menu->stok < $quantity) {
                 throw ValidationException::withMessages([
                     'items' => "Stok menu {$menu->nama_menu} tidak mencukupi.",
                 ]);

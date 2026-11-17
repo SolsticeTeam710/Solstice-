@@ -23,6 +23,12 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     const stock = Number(value);
     return value !== null && value !== void 0 && Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : null;
   };
+  const menuOrderable = (item) => {
+    const active = item?.is_active;
+    const activeFlag = active === undefined || active === null || active === true || active === 1 || active === "1";
+    const status = String(item?.status ?? "").trim().toLowerCase();
+    return activeFlag && (!status || status === "tersedia") && itemStock(item) !== 0;
+  };
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const itemId = (item) => String(item.id_menu ?? item.id ?? item.nama_menu);
   const itemName = (item) => item.nama_menu ?? item.name ?? "Menu Solstice";
@@ -45,17 +51,6 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => node.classList.remove("show"), 2400);
   };
-  const paymentMethodNote = document.getElementById("payment-method-note");
-  function updatePaymentMethodNote() {
-    if (!paymentMethodNote) return;
-    const notes = {
-      CASH: "Pembayaran tunai dilakukan di kasir.",
-      TRANSFER: "Transfer sesuai instruksi, lalu berikan Order ID kepada kasir agar pembayaran diperiksa dan dikonfirmasi manual.",
-      QRIS: "QRIS pada aplikasi ini hanya simulasi dan tidak memproses pembayaran uang nyata.",
-    };
-    paymentMethodNote.textContent = notes[payment] || notes.CASH;
-  }
-  updatePaymentMethodNote();
   async function finishQrisScan(scanned) {
     const scanner = qrisScanner;
     const resolve = resolveQrisScan;
@@ -93,7 +88,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
           { fps: 10, qrbox: { width: 240, height: 240 } },
           (decodedText) => {
             try {
-              const scanned = new URL(decodedText);
+              const scanned = new URL(decodedText, window.location.origin);
               const validQris = scanned.origin === window.location.origin
                 && scanned.pathname === "/qris/scan"
                 && scanned.searchParams.get("token") === "solstice";
@@ -133,31 +128,37 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
   });
   const picture = (item) => {
     const name = itemName(item).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const mapped = name.includes("arak") ? "/images/menu/Arak.webp"
-      : name.includes("matcha latte") ? "/images/menu/Matcha%20Latte.webp"
-      : name.includes("air dingin") ? "/images/menu/air-dingin.jpg"
+    const mapped = name.includes("ice kopi susu aren") ? "/images/menu/Ice%20Kopi%20Susu%20Aren.jpeg"
+      : name.includes("ice caramel macchiato") || name.includes("iced caramel macchiato") ? "/images/menu/Ice%20Caramel%20Macchiato.jpeg"
+      : name.includes("matcha latte") ? "/images/menu/matcha-latte.jpg"
+      : name.includes("almond croissant") ? "/images/menu/Almond%20Croissant.jpg"
+      : name.includes("nasi goreng") ? "/images/menu/Nasi%20Goreng.jpeg"
+      : name.includes("air dingin") ? "/images/menu/Air%20Dingin.jpeg"
       : name.includes("ayam goreng") ? "/images/menu/ayam-goreng.jpg"
       : name.includes("caffe latte") || name.includes("cafe latte") ? "/images/menu/caffe-latte.jpg"
-      : name.includes("kwetiaw") || name.includes("kwetiau") ? "/images/menu/mie-kwetiaw.jpg"
+      : name.includes("kwetiaw") || name.includes("kwetiau") ? "/images/menu/Mie%20Kwetiaw.jpeg"
       : null;
     const photo = item.foto;
     const fallback = categoryKey(item) === "coffee" ? "\u2615" : categoryKey(item) === "makanan" ? "\u{1F950}" : "\u{1F375}";
-    let url = mapped;
-    if (!url && photo) {
+    let url = null;
+    if (photo) {
       const value = String(photo).replace(/\\/g, "/").replace(/^public\//i, "").replace(/^\/+/, "");
       url = /^https?:\/\//i.test(photo) ? photo : /^(images|storage)\//i.test(value) ? `/${value}` : `/storage/${value}`;
     }
+    if (!url) url = mapped;
     if (!url) return `<span class="fallback" aria-hidden="true">${fallback}</span>`;
-    return `<img loading="lazy" src="${escapeHtml(url)}" alt="${escapeHtml(itemName(item))}" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="fallback" aria-hidden="true" hidden>${fallback}</span>`;
+    return `<img loading="lazy" decoding="async" style="display:block;width:100%;height:100%;object-fit:contain!important;object-position:center" src="${escapeHtml(url)}" alt="${escapeHtml(itemName(item))}" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="fallback" aria-hidden="true" hidden>${fallback}</span>`;
   };
   function renderProducts() {
     const shown = products.filter((item) => (category === "all" || categoryKey(item) === category) && `${itemName(item)} ${item.deskripsi || ""}`.toLowerCase().includes(query.toLowerCase()));
     productsEl.innerHTML = shown.length ? shown.map((item) => {
       const id = itemId(item), amount = cart.get(id)?.quantity || 0;
       const stock = itemStock(item);
-      const outOfStock = stock === 0;
-      const stockLabel = stock === null ? "" : outOfStock ? "Menu habis" : amount >= stock ? `Stok: ${stock} · batas tercapai` : `Stok tersedia: ${stock}`;
-      return `<article class="product"><div class="product-photo">${picture(item)}</div><div class="product-body"><h2 class="product-title">${escapeHtml(itemName(item))}</h2><div class="product-desc">${escapeHtml(item.deskripsi || item.nama_kategori || "Dibuat segar untuk Anda")}</div>${stockLabel ? `<div class="stock-note${outOfStock ? " stock-note--empty" : ""}" role="status">${escapeHtml(stockLabel)}</div>` : ""}<div class="product-bottom"><span class="price">${format(itemPrice(item))}</span><button class="add" data-add="${escapeHtml(id)}" aria-label="Tambah ${escapeHtml(itemName(item))} ke keranjang" ${outOfStock ? 'disabled aria-disabled="true"' : ""}>${outOfStock ? "Habis" : amount ? `+ Tambah (${amount})` : "+ Tambah"}</button></div></div></article>`;
+      const status = String(item.status ?? "").trim().toLowerCase();
+      const unavailable = !menuOrderable(item);
+      const availabilityLabel = stock === 0 || status === "habis" ? "Menu habis" : "Tidak tersedia";
+      const stockLabel = unavailable ? availabilityLabel : stock === null ? "" : amount >= stock ? `Stok: ${stock} · batas tercapai` : `Stok tersedia: ${stock}`;
+      return `<article class="product"><div class="product-photo">${picture(item)}</div><div class="product-body"><h2 class="product-title">${escapeHtml(itemName(item))}</h2><div class="product-desc">${escapeHtml(item.deskripsi || item.nama_kategori || "Dibuat segar untuk Anda")}</div>${stockLabel ? `<div class="stock-note${unavailable ? " stock-note--empty" : ""}" role="status">${escapeHtml(stockLabel)}</div>` : ""}<div class="product-bottom"><span class="price">${format(itemPrice(item))}</span><button class="add" data-add="${escapeHtml(id)}" aria-label="Tambah ${escapeHtml(itemName(item))} ke keranjang" ${unavailable ? 'disabled aria-disabled="true"' : ""}>${unavailable ? availabilityLabel : amount ? `+ Tambah (${amount})` : "+ Tambah"}</button></div></div></article>`;
     }).join("") : `<div class="empty">${products.length ? "Menu tidak ditemukan. Coba kata kunci lain." : "Menu belum tersedia saat ini."}</div>`;
   }
   function renderCart() {
@@ -266,7 +267,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
   }
   async function loadMenu() {
     try {
-      const response = await fetch("/menu", { headers: { Accept: "application/json" } });
+      const response = await fetch("/api/menu", { headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error("Tidak dapat memuat menu");
       const data = await response.json();
       products = Array.isArray(data) ? data : data.data || [];
@@ -294,6 +295,10 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     if (add) {
       const item = products.find((product) => itemId(product) === add.dataset.add);
       if (!item) return;
+      if (!menuOrderable(item)) {
+        toast(`${itemName(item)} sedang tidak tersedia.`);
+        return;
+      }
       const line = cart.get(add.dataset.add);
       const stock = itemStock(item);
       if (stock !== null && (line?.quantity || 0) >= stock) {
@@ -309,6 +314,10 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
       if (line) {
         const delta = Number(change.dataset.delta);
         const stock = itemStock(line.item);
+        if (delta > 0 && !menuOrderable(line.item)) {
+          toast(`${itemName(line.item)} sedang tidak tersedia.`);
+          return;
+        }
         if (delta > 0 && stock !== null && line.quantity >= stock) {
           toast(`Stok ${itemName(line.item)} hanya ${stock} item. Jumlah pesanan sudah mencapai stok.`);
           return;
@@ -327,13 +336,12 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
     }
     const option = event.target.closest("[data-payment]");
     if (option) {
-      payment = String(option.dataset.payment || "CASH").toUpperCase();
+      payment = option.dataset.payment;
       document.querySelectorAll(".payment-option").forEach((button) => {
         const selected = button === option;
         button.classList.toggle("active", selected);
         button.setAttribute("aria-pressed", String(selected));
       });
-      updatePaymentMethodNote();
     }
   });
   document.getElementById("menu-search").addEventListener("input", (event) => {
@@ -442,10 +450,8 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
       document.getElementById("success-order").textContent = `#${lastOrderId}`;
       document.getElementById("track-order").textContent = `#${lastOrderId}`;
       document.getElementById("success-total").textContent = format(result.order.total_harga);
-      document.getElementById("success-cash-note").hidden = selectedPayment !== "CASH";
+      document.getElementById("success-cash-note").hidden = selectedPayment === "QRIS";
       document.getElementById("success-qris-note").hidden = selectedPayment !== "QRIS";
-      document.getElementById("success-transfer-note").hidden = selectedPayment !== "TRANSFER";
-      document.getElementById("transfer-amount-label").textContent = format(result.order.total_harga);
       cart.clear();
       renderCart();
       showPage("success");

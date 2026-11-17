@@ -1,90 +1,138 @@
 # ☕ Solstice Coffee — Coffee Shop Order System
 
+![Logo Solstice Coffee](public/images/solstice-logo.jpeg)
+
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com/)
-[![Database](https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Project](https://img.shields.io/badge/Project-UKK%20RPL-6B4F3A?style=for-the-badge)](https://github.com/SolsticeTeam710/Solstice-)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![UKK RPL](https://img.shields.io/badge/Project-UKK%20RPL-6B4F3A?style=for-the-badge)](https://github.com/SolsticeTeam710/Solstice-)
 
-> Proyek Uji Kompetensi Keahlian Rekayasa Perangkat Lunak / PPLG — Tahun Ajaran 2026/2027  
-> **Tema:** Local Digital Solution & bull 
-> **Mitra:** Sistem Pemesanan dan Operasional Kedai Kopi - Solstice Coffee
+> Proyek Uji Kompetensi Keahlian Rekayasa Perangkat Lunak (UKK RPL/PPLG)  
+> **Nama aplikasi:** Solstice Coffee — Coffee Shop Order System
 
 ---
 
-## 📌 1. Latar Belakang dan Solusi
+## 1. Deskripsi Proyek
 
-Solstice Coffe melayani minuman kopi, non-kopi, dan makanan. Proses melihat menu, mencatat pesanan, mengelola antrean, memantau stok, serta membuat rekap penjualan masih menjadi masalah yang masih dikelola operasional kedai secara manual.
-Solstice Coffee membutuhkan alur yang menghubungkan pemesanan pelanggan, pemrosesan pesanan yang dikelola kasir, pengelolaan menu dan stok, serta pemantauan penjualan. Aplikasi menyediakan menu melalui QR meja, pencatatan pesanan dengan Order ID, verifikasi pesanan, dan panel administrasi.
+Solstice Coffee adalah aplikasi web untuk membantu proses pemesanan dan pengelolaan operasional coffee shop. Aplikasi menghubungkan pelanggan, kasir, dan admin dalam satu sistem.
+
+Dalam operasional coffee shop, pemesanan, pemeriksaan stok, konfirmasi pembayaran, dan pencatatan penjualan perlu dikelola dengan rapi. Jika proses tersebut dilakukan secara terpisah atau manual, pesanan bisa terlewat dan informasi stok maupun penjualan lebih sulit dipantau.
+
+Solstice Coffee menyediakan pemesanan melalui QR meja, dashboard kasir untuk memproses pesanan dan pembayaran, serta dashboard admin untuk mengelola menu, stok, pengguna, dan laporan penjualan.
 
 ### Fitur utama
 
-- **Pelanggan:** melihat menu, memesan dari QR meja tanpa login, mengisi nama, catatan (opsional), memilih metode pembayaran CASH atau QRIS, dan memeriksa status pesanan.
-- **Kasir:** mencari pesanan, melihat rincian sebelum verifikasi, mengonfirmasi CASH dengan nominal uang yang cukup, mengonfirmasi QRIS secara manual, serta mencetak struk dari browser.
-- **Admin:** mengelola menu, kategori, akun staf, stok menu dan batas minimum, serta laporan penjualan dan ekspor CSV.
+- **Pelanggan:** membuka menu melalui QR meja tanpa login, memilih menu yang tersedia, mengirim pesanan, dan melihat status pesanan.
+- **Kasir:** melihat daftar dan rincian pesanan, mengonfirmasi atau menolak pesanan, memproses pembayaran, dan mencetak struk.
+- **Admin:** mengelola menu, kategori, akun staf, stok, dan laporan penjualan.
+- **Laporan:** memfilter penjualan berdasarkan periode dan metode pembayaran, mengunduh CSV, atau menggunakan fitur cetak browser untuk menyimpan sebagai PDF.
+- **Pembayaran:** CASH dan QRIS. QRIS pada aplikasi ini masih simulasi dan tidak memproses uang sungguhan.
 
-## 🛠️ 2. Tech Stack & Architecture
+---
 
+## 2. Matriks Teknologi yang Digunakan
+
+| Bagian | Teknologi |
+|---|---|
 | Backend | PHP 8.2+, Laravel 12 |
-| frontend | Vite 7, Tailwind CSS 4, Blade, JavaScript, CSS |
-| Database | PostgreSQL, termasuk Supabase PostgreSQL |
-| Security | Laravel Hash (bcrypt), Eloquent/Query Builder (parameter binding), CSRF Middleware, Authentication & Role Middleware, Rate Limiting. |
+| Frontend | Blade, JavaScript, CSS, Tailwind CSS 4 |
+| Asset bundler | Vite 7 |
+| Database | PostgreSQL (Supabase) |
+| Autentikasi | Laravel Authentication dan Role Middleware |
+| Keamanan | Hash password Laravel, validasi server, parameter binding, CSRF Middleware, dan pembatasan percobaan login/pemesanan |
+| Hosting demo | Wasmer Edge |
+| Pengujian | PHPUnit melalui `php artisan test` |
 
+---
 
-## 🚀 3. Instalasi Lokal
+## 3. Instalasi Lokal
 
-Ikuti langkah berikut untuk menjalankan aplikasi di lingkungan pengembang lokal:
+### Prasyarat
 
-### Prasyarat Sistem:
-
-- PHP 8.2+ dengan ekstensi yang diperlukan Laravel dan pdo_pgsql
+- PHP 8.2 atau versi lebih baru
+- Ekstensi PHP yang diperlukan Laravel, termasuk `pdo_pgsql`
 - Composer
-- PostgreSQL lokal atau database PostgreSQL yang dapat diakses
-- Node.js, npm, dan Git
+- PostgreSQL
+- Node.js dan npm
+- Git
 
-### Langkah Installasi:
+### Langkah instalasi
+
+Jalankan perintah berikut di PowerShell dari folder tempat project akan disimpan:
 
 ```powershell
-# 1. Clone repository
-git clone https://github.com/SolsticeTeam710/Solstice-.git
-Set-Location .\Solstice-\Solstice
+# 1. Clone repository ke folder Solstice
+git clone https://github.com/SolsticeTeam710/Solstice-.git Solstice
+Set-Location .\Solstice
 
-# 2. Pasang dependensi PHP dan buat file konfigurasi lokal
+# 2. Pasang dependensi PHP
 composer install
+
+# 3. Salin file konfigurasi
 Copy-Item .env.example .env
 
-# 3. Salin konfigurasi environment
-Copy-Item .env.example .env
-
-# 4. Buat application key
+# 4. Generate application key
 php artisan key:generate
-```
-
-```dotenv
-# 5. Atur konfigurasi aplikasi dan database pada file .env
-APP_NAME="Solstice_Coffe"
+Buat database PostgreSQL kosong bernama solstice_db, lalu sesuaikan konfigurasi .env:
+APP_NAME="Solstice Coffee"
 APP_ENV=local
+APP_KEY=
 APP_DEBUG=true
-APP_URL=http://localhost:8000
+APP_URL=http://127.0.0.1:8000
 
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_DATABASE=solstice_db
 DB_USERNAME=postgres
-DB_PASSWORD=password_database
-```
-
-Lanjutkan instalasi:
-
-```powershell
-# 6. Jalankan migration dan seeder pada database kosong
+DB_PASSWORD=password_postgresql_lokal
+Lanjutkan pemasangan:
+# 5. Jalankan migrasi dan seeder pada database lokal
 php artisan migrate --seed
 
-# 7. Hubungkan storage untuk file aplikasi
-php artisan storage:link
-
-# 8. Build asset dan jalankan server lokal
+# 6. Pasang dependensi frontend dan build asset
 npm ci
 npm run build
-php artisan serve
-```
+
+# 7. Siapkan storage link untuk file publik
+php artisan storage:link
+
+# 8. Jalankan server lokal
+php artisan serve --host=127.0.0.1 --port=8000
+Buka halaman pelanggan melalui:
+http://127.0.0.1:8000/menu?meja=1
+Nomor meja yang tersedia adalah 1 sampai 4. Halaman login kasir dan admin tersedia di:
+http://127.0.0.1:8000/login
+4. Contoh Akun Uji Coba Default
+Akun kasir dan admin berikut dibuat oleh UserSeeder untuk pengujian lokal. Pelanggan tidak perlu login.
+Peran	    Username	     Password Hak akses
+Pelanggan	Tidak perlu login	—	         Melihat menu dan membuat pesanan melalui QR meja
+
+Kasir	    kasir1	          password	  Memproses pesanan, mengonfirmasi atau menolak pembayaran, dan mencetak struk
+
+Admin	     admin	          password	 Mengelola menu, kategori, pengguna, stok, dan laporan
+
+
+Akun tersebut adalah akun uji coba lokal. Ganti password sebelum aplikasi digunakan dengan data atau akun sungguhan. QRIS pada aplikasi hanya simulasi.
+
+5. Menjalankan Pengujian
+Jalankan pengujian Laravel dengan:
+php artisan test
+Hasil pengujian terakhir:
+Tests: 2 passed (4 assertions)
+6. Demo Online dan Catatan Mode LAN
+Aplikasi demo online:
+
+https://solstice-coffee.wasmer.app
+
+Halaman pemesanan pelanggan:
+
+https://solstice-coffee.wasmer.app/menu?meja=1
+
+Mode LAN memerlukan PostgreSQL lokal yang sudah berisi database aplikasi dan perangkat pelanggan/penguji pada jaringan WiFi yang sama. QR meja untuk mode LAN harus menggunakan alamat IP lokal laptop, bukan alamat Wasmer. Uji kamera QRIS langsung di perangkat yang akan dipakai karena QRIS aplikasi masih berupa simulasi.
+
+7. Anggota Pengembang dan Pembagian Peran
+- [Raka Herlambang]: [Frontend & UI/UX Designer]
+- [Zacka Tapa Raga Alhamra]: [Backend & Database Specialist]
+Sekolah: [SMK Budi Bakti Ciwidey]
+Pembimbing: [Nurdiansyah Permana]

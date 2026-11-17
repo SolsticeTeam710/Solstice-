@@ -195,21 +195,19 @@ body {
   box-shadow: 0 10px 25px #30282012;
 }
 .product-photo {
-  height: 168px;
-  background:
-    linear-gradient(
-      135deg,
-      #d8c4a5,
-      #f0e4d0);
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(135deg, #e9dfd1, #f7f3ed);
   display: grid;
   place-items: center;
   position: relative;
   overflow: hidden;
 }
 .product-photo img {
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 .product-photo .fallback {
   font-size: 47px;
@@ -428,7 +426,7 @@ body {
 }
 .payment-options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 .payment-option {
@@ -607,9 +605,6 @@ body {
   .products {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  .product-photo {
-    height: 185px;
-  }
   .panel {
     padding: 23px;
   }
@@ -643,9 +638,6 @@ body {
   .products {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
-  }
-  .product-photo {
-    height: 135px;
   }
   .product-body {
     padding: 10px;
@@ -756,7 +748,6 @@ body {
   .queue { gap: 8px; }
   .queue div { min-width: 0; padding: 11px 13px; }
   .queue strong { font-size: 17px; }
-  .payment-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .payment-options { gap: 7px; }
   .payment-option { padding: 11px 9px; }
 }
