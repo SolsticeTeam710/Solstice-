@@ -183,7 +183,7 @@
                         <div class="step" data-track-step="1">
                             <span class="step-mark">✓</span>
                             <div>
-                                <strong>Pesanan diterima</strong>
+                                <strong>Menunggu konfirmasi kasir</strong>
                                 <p>Menunggu konfirmasi pembayaran dari kasir.</p>
                             </div>
                         </div>
