@@ -183,15 +183,29 @@
                         <div class="step" data-track-step="1">
                             <span class="step-mark">✓</span>
                             <div>
-                                <strong>Pesanan disiapkan</strong>
-                                <p>Ringkasan pesanan siap ditunjukkan kepada kasir.</p>
+                                <strong>Pesanan diterima</strong>
+                                <p>Menunggu konfirmasi pembayaran dari kasir.</p>
                             </div>
                         </div>
                         <div class="step" data-track-step="2">
                             <span class="step-mark">2</span>
                             <div>
-                                <strong>Menunggu konfirmasi kasir</strong>
-                                <p>Kasir akan mengonfirmasi pesanan dan pembayaran Anda.</p>
+                                <strong>Sedang diproses</strong>
+                                <p>Pembayaran telah dikonfirmasi dan pesanan sedang dibuat.</p>
+                            </div>
+                        </div>
+                        <div class="step" data-track-step="3">
+                            <span class="step-mark">3</span>
+                            <div>
+                                <strong>Siap disajikan</strong>
+                                <p>Pesanan siap diserahkan kepada Anda.</p>
+                            </div>
+                        </div>
+                        <div class="step" data-track-step="4">
+                            <span class="step-mark">4</span>
+                            <div>
+                                <strong>Selesai</strong>
+                                <p>Pesanan sudah diserahkan.</p>
                             </div>
                         </div>
                     </div>

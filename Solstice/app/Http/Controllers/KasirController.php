@@ -59,6 +59,10 @@ class KasirController extends Controller
 
         if ($status === 'pending') {
             $query->whereIn('pesanan.status', ['pending', 'baru', 'menunggu pembayaran', 'menunggu', 'menunggu konfirmasi kasir']);
+        } elseif ($status === 'processing') {
+            $query->where('pesanan.status', 'diproses');
+        } elseif ($status === 'ready') {
+            $query->where('pesanan.status', 'siap');
         } elseif ($status === 'done') {
             $query->whereIn('pesanan.status', ['selesai', 'done', 'completed', 'lunas']);
         } elseif ($status === 'rejected') {
@@ -268,20 +272,61 @@ public function verify(Request $request, string $orderId)
 
         DB::table('pesanan')
             ->where('id_pesanan', $order->id_pesanan)
-            ->update(['status' => 'selesai']);
-
-        DB::table('meja')
-            ->where('id_pesanan', $order->id_pesanan)
-            ->update([
-                'id_pesanan' => null,
-                'status' => 'kosong',
-            ]);
+            ->update(['status' => 'diproses']);
 
     });
 
     Cache::forever('admin.metrics.version', (string) Str::uuid());
 
     return response()->json(['message' => 'Pembayaran diverifikasi.']);
+}
+
+public function updateStatus(Request $request, string $orderId)
+{
+    $data = $request->validate([
+        'status' => ['required', 'in:siap,selesai'],
+    ]);
+
+    DB::transaction(function () use ($orderId, $data) {
+        $order = DB::table('pesanan')
+            ->where('order_id', $orderId)
+            ->lockForUpdate()
+            ->first();
+
+        abort_if(! $order, 404, 'Pesanan tidak ditemukan.');
+
+        $nextStatus = [
+            'diproses' => 'siap',
+            'siap' => 'selesai',
+        ];
+
+        abort_unless(
+            ($nextStatus[$order->status] ?? null) === $data['status'],
+            409,
+            'Perubahan status pesanan tidak sesuai urutan.'
+        );
+
+        DB::table('pesanan')
+            ->where('id_pesanan', $order->id_pesanan)
+            ->update(['status' => $data['status']]);
+
+        if ($data['status'] === 'selesai') {
+            DB::table('meja')
+                ->where('id_pesanan', $order->id_pesanan)
+                ->update([
+                    'id_pesanan' => null,
+                    'status' => 'kosong',
+                ]);
+        }
+    });
+
+    Cache::forever('admin.metrics.version', (string) Str::uuid());
+
+    return response()->json([
+        'message' => $data['status'] === 'siap'
+            ? 'Pesanan ditandai siap disajikan.'
+            : 'Pesanan selesai dan meja telah dikosongkan.',
+    ]);
 }
 
 public function reject(string $orderId)

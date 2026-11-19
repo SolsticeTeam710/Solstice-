@@ -99,6 +99,7 @@ Route::middleware(['auth', 'role:kasir,admin'])
         Route::get('/orders/search', [KasirController::class, 'searchByCustomer']);
         Route::get('/orders/{orderId}', [KasirController::class, 'search']);
         Route::put('/orders/{orderId}/verify', [KasirController::class, 'verify']);
+        Route::put('/orders/{orderId}/status', [KasirController::class, 'updateStatus']);
         Route::put('/orders/{orderId}/reject', [KasirController::class, 'reject']);
     });
 

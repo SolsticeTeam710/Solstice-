@@ -140,6 +140,8 @@
         .topbar { padding-inline: 12px; }
         .topbar h1 { font-size: 17px; }
     }
+    .badge.processing { background: #e8f0ff; color: #315b9a; }
+    .badge.ready { background: #e5f4e8; color: #267441; }
 </style>
 </head>
 <body>
@@ -170,7 +172,7 @@
             </section>
 
             <section class="view" id="view-orders">
-                <section class="card"><div class="card-head"><div><h2>Daftar Pesanan</h2><p class="card-subtitle">Pantau status pesanan yang masuk.</p></div><button class="btn" data-refresh>↻ Segarkan</button></div><div class="filter-row" id="status-filters"><button class="filter-chip active" data-status="all">Semua</button><button class="filter-chip" data-status="pending">Menunggu konfirmasi kasir</button><button class="filter-chip" data-status="done">Selesai</button><button class="filter-chip" data-status="rejected">Ditolak</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Nama Pelanggan</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orders-table"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div><div id="orders-empty" class="empty" hidden><div class="empty-icon">☕</div>Belum ada pesanan.</div><div class="orders-pagination" id="orders-pagination" hidden><span class="orders-pagination-summary" id="orders-page-summary"></span><div class="actions"><button class="btn" data-order-page="-1">← Sebelumnya</button><button class="btn" data-order-page="1">Berikutnya →</button></div></div></section>
+                <section class="card"><div class="card-head"><div><h2>Daftar Pesanan</h2><p class="card-subtitle">Pantau status pesanan yang masuk.</p></div><button class="btn" data-refresh>↻ Segarkan</button></div><div class="filter-row" id="status-filters"><button class="filter-chip active" data-status="all">Semua</button><button class="filter-chip" data-status="pending">Menunggu konfirmasi kasir</button><button class="filter-chip" data-status="processing">Sedang diproses</button><button class="filter-chip" data-status="ready">Siap disajikan</button><button class="filter-chip" data-status="done">Selesai</button><button class="filter-chip" data-status="rejected">Ditolak</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Nama Pelanggan</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orders-table"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div><div id="orders-empty" class="empty" hidden><div class="empty-icon">☕</div>Belum ada pesanan.</div><div class="orders-pagination" id="orders-pagination" hidden><span class="orders-pagination-summary" id="orders-page-summary"></span><div class="actions"><button class="btn" data-order-page="-1">← Sebelumnya</button><button class="btn" data-order-page="1">Berikutnya →</button></div></div></section>
             </section>
 
             <section class="view" id="view-search">
@@ -213,8 +215,8 @@
                 timeZone: 'Asia/Jakarta',
             }).format(parsed);
     };
-    const normalize = status => { const s=String(status||'').toLowerCase(); if(['pending','baru','menunggu pembayaran','menunggu','menunggu konfirmasi kasir'].includes(s))return 'pending'; if(['selesai','done','completed','lunas'].includes(s))return 'done'; if(['ditolak','rejected'].includes(s))return 'rejected'; return 'other'; };
-    const statusText = status => ({pending:'Menunggu konfirmasi kasir',done:'Selesai',rejected:'Pembayaran ditolak',other:'Status lain'}[normalize(status)]);
+    const normalize = status => { const s=String(status||'').toLowerCase(); if(['pending','baru','menunggu pembayaran','menunggu','menunggu konfirmasi kasir'].includes(s))return 'pending'; if(['diproses','processing'].includes(s))return 'processing'; if(['siap','siap disajikan','ready'].includes(s))return 'ready'; if(['selesai','done','completed','lunas'].includes(s))return 'done'; if(['ditolak','rejected'].includes(s))return 'rejected'; return 'other'; };
+    const statusText = status => ({pending:'Menunggu konfirmasi kasir',processing:'Sedang diproses',ready:'Siap disajikan',done:'Selesai',rejected:'Pembayaran ditolak',other:'Status lain'}[normalize(status)]);
     const badge = status => `<span class="badge ${normalize(status)}">${esc(statusText(status))}</span>`;
     const get = (obj,...keys) => { for(const key of keys)if(obj?.[key]!==undefined&&obj?.[key]!==null)return obj[key]; return null; };
 
@@ -308,10 +310,14 @@
             action = method === 'QRIS'
                 ? '<article class="card"><h2>Konfirmasi Pembayaran</h2><p class="helper">Pembayaran dengan metode QRIS telah dikonfirmasi.</p><div class="divider"></div><div class="payment-actions"><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Pembayaran</button>' + rejectButton + '</div></article>'
                 : '<article class="card"><h2>Verifikasi Bayar</h2><p class="helper">Pastikan pembayaran sudah diterima sebelum dikonfirmasi.</p><div class="divider"></div><div class="payment-actions"><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Bayar</button>' + rejectButton + '</div></article>';
+        } else if (stage === 'processing') {
+            action = '<article class="card"><h2>Pesanan Sedang Diproses</h2><p class="helper">Pembayaran telah dikonfirmasi. Pesanan sedang diproses di dapur.</p><div class="divider"></div><button class="btn primary" data-next-status="siap" data-order-status="' + esc(id) + '">Tandai Siap Disajikan</button></article>';
+        } else if (stage === 'ready') {
+            action = '<article class="card"><h2>Pesanan Siap Disajikan</h2><p class="helper">Tandai selesai setelah pesanan diserahkan kepada pelanggan.</p><div class="divider"></div><button class="btn primary" data-next-status="selesai" data-order-status="' + esc(id) + '">Selesaikan Pesanan</button></article>';
         } else if (stage === 'done') {
             action = method === 'QRIS'
-                ? '<article class="card"><h2>Konfirmasi Pembayaran</h2><p class="helper">Pembayaran dengan metode QRIS telah dikonfirmasi.</p></article>'
-                : '<article class="card"><h2>Pembayaran terkonfirmasi</h2><p class="helper">Pesanan sudah selesai.</p></article>';
+                ? '<article class="card"><h2>Pesanan Selesai</h2><p class="helper">Pembayaran QRIS telah dikonfirmasi dan pesanan sudah diserahkan.</p></article>'
+                : '<article class="card"><h2>Pesanan Selesai</h2><p class="helper">Pembayaran terkonfirmasi dan pesanan sudah diserahkan.</p></article>';
         } else if (stage === 'rejected') {
             action = '<article class="card"><h2>Pembayaran Ditolak</h2><p class="helper">Pesanan ini tidak diproses. Silakan hubungi kasir untuk informasi lebih lanjut.</p></article>';
         } else {
@@ -433,9 +439,10 @@
         if (detail) {
             try {
                 const order = await findOrder(detail.dataset.detail);
-                const isPending = normalize(get(order, 'status', 'status_pesanan')) === 'pending';
-                switchView(isPending ? 'verify' : 'search');
-                document.getElementById(isPending ? 'verify-result' : 'search-result').innerHTML = orderDetail(order);
+                const stage = normalize(get(order, 'status', 'status_pesanan'));
+                const canAdvance = ['pending', 'processing', 'ready'].includes(stage);
+                switchView(canAdvance ? 'verify' : 'search');
+                document.getElementById(canAdvance ? 'verify-result' : 'search-result').innerHTML = orderDetail(order);
             } catch (error) {
                 notify(error.message, 'error');
             }
@@ -496,6 +503,25 @@
                 await request(api + '/orders/' + encodeURIComponent(reject.dataset.reject) + '/reject', { method: 'PUT' });
                 notify('Pembayaran ditolak.');
                 const order = await findOrder(reject.dataset.reject);
+                document.getElementById('verify-result').innerHTML = orderDetail(order);
+                loadData();
+                loadOrders();
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        const nextStatus = event.target.closest('[data-next-status]');
+        if (nextStatus) {
+            try {
+                await request(api + '/orders/' + encodeURIComponent(nextStatus.dataset.orderStatus) + '/status', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: nextStatus.dataset.nextStatus }),
+                });
+                notify(nextStatus.dataset.nextStatus === 'siap' ? 'Pesanan ditandai siap disajikan.' : 'Pesanan selesai.');
+                const order = await findOrder(nextStatus.dataset.orderStatus);
+                switchView('verify');
                 document.getElementById('verify-result').innerHTML = orderDetail(order);
                 loadData();
                 loadOrders();

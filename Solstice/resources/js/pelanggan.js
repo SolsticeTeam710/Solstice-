@@ -201,49 +201,44 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
       const states = {
         pending: {
+          currentStep: 1,
+          message: "Pesanan diterima. Menunggu konfirmasi pembayaran dari kasir.",
+        },
+        diproses: {
           currentStep: 2,
-          message: "Pesanan diterima. Menunggu konfirmasi kasir.",
-          step2Title: "Menunggu konfirmasi kasir",
-          step2Description: "Kasir akan mengonfirmasi pesanan dan pembayaran Anda.",
+          message: "Pembayaran dikonfirmasi. Pesanan Anda sedang diproses.",
+        },
+        siap: {
+          currentStep: 3,
+          message: "Pesanan siap disajikan.",
         },
         selesai: {
           finished: true,
+          currentStep: 4,
           message: "Pesanan selesai dan sudah diserahkan. Terima kasih!",
-          step2Title: "Pembayaran terkonfirmasi",
-          step2Description: "Kasir telah memverifikasi pembayaran dan menyelesaikan pesanan.",
         },
         ditolak: {
           rejected: true,
-          currentStep: 2,
-          message: "Pembayaran ditolak oleh kasir. Silakan hubungi kasir untuk bantuan.",
-          step2Title: "Pembayaran ditolak",
-          step2Description: "Pesanan ini tidak diproses. Hubungi kasir untuk informasi lebih lanjut.",
+          currentStep: 1,
+          message: "Pesanan ditolak oleh kasir dan tidak diproses. Silakan hubungi kasir.",
         },
       };
       const state = states[result.status] || {
-        currentStep: 2,
+        currentStep: 1,
         message: "Status pesanan belum tersedia. Silakan tanyakan kepada kasir.",
-        step2Title: "Menunggu informasi dari kasir",
-        step2Description: "Kasir dapat membantu memastikan status pesanan Anda.",
       };
 
       if (message) message.textContent = state.message;
-
-      const step2 = document.querySelector('[data-track-step="2"]');
-      if (step2) {
-        step2.querySelector("strong").textContent = state.step2Title;
-        step2.querySelector("p").textContent = state.step2Description;
-      }
 
       document.querySelectorAll("[data-track-step]").forEach((step) => {
         const number = Number(step.dataset.trackStep);
         const done = state.finished || number < state.currentStep;
         step.classList.toggle("done", done);
-        step.classList.toggle("current", !state.finished && number === state.currentStep);
-        step.classList.toggle("rejected", Boolean(state.rejected) && number === 2);
+        step.classList.toggle("current", !state.finished && !state.rejected && number === state.currentStep);
+        step.classList.toggle("rejected", Boolean(state.rejected) && number === state.currentStep);
 
         const mark = step.querySelector(".step-mark");
-        if (mark) mark.textContent = done ? "✓" : String(number);
+        if (mark) mark.textContent = state.rejected && number === state.currentStep ? "×" : done ? "✓" : String(number);
       });
     } catch (error) {
       if (message) message.textContent = error.message || "Status pesanan gagal dimuat. Coba lagi.";
