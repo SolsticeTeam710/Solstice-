@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Kasir — Solstice Coffee</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    @vite(['resources/css/app.css'])
+    <style>
+        :root{--coffee:#704f39;--coffee-dark:#563923;--cream:#f5e6c8;--paper:#fff;--canvas:#fbfaf8;--ink:#302820;--muted:#85817c;--line:#e9e5e0;--green:#277746;--amber:#a76000;--blue:#2765a6}
+        *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font:14px 'Instrument Sans',sans-serif}.shell{min-height:100vh;display:flex}.sidebar{position:sticky;top:0;height:100vh;width:232px;flex:none;background:var(--coffee);color:#fff8ed;padding:19px 16px;display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:10px;padding:0 3px 17px;border-bottom:1px solid #ffffff2d}.brand-logo{width:38px;height:38px;border-radius:9px;background:var(--cream);object-fit:cover}.brand strong{display:block;font:700 15px 'Bricolage Grotesque',sans-serif}.brand small,.profile small{opacity:.72;font-size:10px}.nav{display:grid;gap:5px;margin-top:18px}.nav button{border:0;background:transparent;color:inherit;border-radius:8px;padding:10px 11px;display:flex;align-items:center;gap:10px;text-align:left;font:600 12px 'Instrument Sans',sans-serif;cursor:pointer}.nav button:hover{background:#ffffff16}.nav button.active{background:var(--cream);color:var(--coffee)}.nav-icon{width:18px;text-align:center;font-size:16px}.profile{margin-top:auto;display:flex;align-items:center;gap:9px;padding:12px 2px 0}.avatar{height:32px;width:32px;border-radius:50%;background:var(--cream);color:var(--coffee);display:grid;place-items:center;font-size:10px;font-weight:700}.profile strong{display:block;font-size:11px}.profile form{margin-left:auto}.logout{border:0;background:transparent;color:#ffd6ca;font-size:18px;cursor:pointer}.main{min-width:0;flex:1}.topbar{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 30px}.topbar h1{margin:0;color:var(--coffee);font:700 22px 'Bricolage Grotesque',sans-serif}.session{display:flex;align-items:center;gap:13px;color:var(--muted);font-size:11px}.shift{background:var(--cream);color:var(--coffee-dark);border:1px solid var(--coffee);border-radius:7px;padding:7px 12px;font-weight:700}.content{padding:26px 30px;max-width:1500px;margin:auto}.view{display:none}.view.active{display:block}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:22px}.card,.stat{background:var(--paper);border:1px solid var(--line);border-radius:13px}.stat{padding:19px 20px;min-height:112px}.stat.highlight{background:var(--cream);border-color:var(--coffee)}.stat-label{font-size:11px;color:#716c66}.stat-number{font:800 25px 'Bricolage Grotesque',sans-serif;margin:8px 0 4px;color:var(--coffee)}.stat:nth-child(2) .stat-number{color:#d45b00}.stat:nth-child(3) .stat-number{color:var(--green)}.stat-note{font-size:10px;color:var(--muted)}.stat-note.good{color:var(--green)}.card{padding:18px;margin-bottom:18px}.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.card h2{font:700 15px 'Bricolage Grotesque',sans-serif;color:var(--coffee);margin:0}.card-subtitle{color:var(--muted);font-size:11px;margin-top:5px}.actions{display:flex;gap:8px;align-items:center}.btn{border:1px solid var(--line);background:white;color:var(--coffee);border-radius:7px;padding:9px 12px;font:600 11px 'Instrument Sans',sans-serif;cursor:pointer}.btn:hover{border-color:var(--coffee);background:#fbf6ee}.btn.primary{background:var(--coffee);color:white;border-color:var(--coffee)}.btn.primary:hover{background:var(--coffee-dark)}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.input,.select{border:1px solid var(--line);border-radius:7px;background:#fff;padding:10px 12px;font:12px 'Instrument Sans',sans-serif;color:var(--ink);outline:none}.input:focus,.select:focus{border-color:var(--coffee);box-shadow:0 0 0 3px #704f3915}.search-input{width:min(340px,100%)}.filter-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}.filter-chip{border:1px solid var(--line);border-radius:99px;padding:7px 11px;background:#fff;color:#625d57;font:600 10px 'Instrument Sans',sans-serif;cursor:pointer}.filter-chip.active{background:var(--coffee);border-color:var(--coffee);color:white}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:720px;text-align:left}th{background:var(--cream);color:var(--coffee);font-size:10px;padding:11px 12px;white-space:nowrap}th:first-child{border-radius:7px 0 0 7px}th:last-child{border-radius:0 7px 7px 0}td{border-bottom:1px solid var(--line);padding:13px 12px;font-size:11px;vertical-align:middle}tbody tr:last-child td{border-bottom:0}.order-id{color:var(--coffee);font-weight:600}.amount{font-weight:700;white-space:nowrap}.badge{display:inline-block;border-radius:6px;padding:4px 8px;font-size:9px;font-weight:700;white-space:nowrap}.badge.pending{background:#fff1da;color:#965500}.badge.done{background:#e5f4e8;color:#267441}.badge.other{background:#eee;color:#555}.badge.rejected{background:#fff0ed;color:#9b3927}.btn.reject{color:#9b3927;border-color:#e8c1b8}.btn.reject:hover{background:#fff0ed;border-color:#c94d3a}.empty{padding:40px;text-align:center;color:var(--muted);font-size:12px}.empty-icon{font-size:25px;margin-bottom:8px}.loading{padding:24px;text-align:center;color:var(--muted);font-size:12px}.feedback{margin-bottom:14px;padding:11px 13px;border-radius:8px;font-size:12px;display:none}.feedback.show{display:block}.feedback.error{background:#fff0ed;color:#9b3927}.feedback.success{background:#eaf6ed;color:#27653a}.detail-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.8fr);gap:16px}.detail-list{display:grid;grid-template-columns:130px 1fr;gap:12px 16px;font-size:12px}.detail-list dt{color:var(--muted)}.detail-list dd{margin:0;font-weight:600;overflow-wrap:anywhere}.divider{height:1px;background:var(--line);margin:15px 0}.detail-total{display:flex;justify-content:space-between;font-weight:700;color:var(--coffee)}.helper{font-size:11px;line-height:1.55;color:var(--muted)}.receipt{width:80mm;max-width:100%;margin:0 auto;background:white;border:1px dashed #c9c1b9;padding:4mm;font:12px ui-monospace,monospace}.receipt-logo{display:block;width:64px;height:64px;object-fit:contain;margin:0 auto 10px}.receipt h2,.receipt p{text-align:center}.receipt-address{max-width:100%;margin:0 auto 8px;font-size:10px;line-height:1.4;overflow-wrap:anywhere}.receipt h2{font:700 18px 'Bricolage Grotesque',sans-serif;color:var(--coffee)}.receipt-row{display:flex;justify-content:space-between;gap:2mm;margin:9px 0}.receipt-total{font-weight:700;border-top:1px dashed #bbb;padding-top:13px}.page-message{margin:0 0 13px;font-size:12px;color:var(--muted)}
+        @media(max-width:900px){.sidebar{width:74px;padding:16px 9px}.brand{justify-content:center;padding:0 0 14px}.brand-copy,.nav-label,.profile-copy,.logout{display:none}.nav button{justify-content:center;padding:11px 5px}.profile{justify-content:center}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.content{padding:20px}.topbar{padding:0 20px}}
+        @media(max-width:560px){.sidebar{width:58px;padding:12px 6px}.brand-logo{width:34px;height:34px}.content{padding:15px 12px}.topbar{height:56px;padding:0 12px}.topbar h1{font-size:18px}.session{gap:6px;font-size:9px}.shift{padding:6px 7px}.stats{gap:8px}.stat{padding:13px;min-height:100px}.stat-number{font-size:20px}.card{padding:13px}.card-head{align-items:flex-start}.detail-layout{grid-template-columns:1fr}.detail-list{grid-template-columns:100px 1fr}}
+        @media print{@page{margin:0}.sidebar,.topbar,.no-print{display:none!important}html,body{width:80mm!important;margin:0!important;padding:0!important;background:#fff!important}.shell,.main{display:block;width:80mm!important;min-width:0!important;margin:0!important;padding:0!important}.content{width:80mm!important;max-width:none!important;margin:0!important;padding:0!important}.view{display:none!important}#view-receipt{display:block!important;width:80mm!important;margin:0!important;padding:0!important}.receipt{width:80mm!important;max-width:none!important;margin:0!important;padding:4mm!important;border:0!important;box-shadow:none!important;overflow-wrap:anywhere;print-color-adjust:exact;-webkit-print-color-adjust:exact}.receipt-row{gap:2mm}.receipt-row>*:last-child{text-align:right;overflow-wrap:anywhere}}
+</style>
+<style>
+    .nav-icon{width:18px;height:18px;flex:none;text-align:center;font-size:16px}
+    .nav button{min-height:42px;transition:background .16s ease,color .16s ease,transform .16s ease}
+    .nav button:hover{transform:translateX(2px)}
+    .nav button:focus-visible,.btn:focus-visible,.input:focus-visible{outline:3px solid #d8b98d;outline-offset:2px}
+    .card,.stat{box-shadow:0 5px 20px rgb(48 40 32 / 4%)}
+    .card{border-radius:15px}
+    .table-wrap th{letter-spacing:.02em}
+    .table-wrap tbody tr:hover{background:#fcfaf7}
+    .orders-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+    .orders-pagination-summary{color:var(--muted);font-size:11px}
+    .orders-pagination .actions{margin-left:auto}
+    @media(max-width:560px){.orders-pagination{align-items:stretch;flex-direction:column}.orders-pagination .actions{width:100%}.orders-pagination .actions .btn{flex:1}}
+    .order-items{min-width:500px!important}
+    .order-items th,.order-items td{font-size:11px}
+    .cash-input{width:100%;max-width:240px}
+    .cash-hint{margin-top:5px}
+    .btn.danger{border-color:#e6c5bf;color:#9b3927}
+    .btn.danger:hover{background:#fff0ed;border-color:#d9a399}
+    .payment-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .badge.rejected{background:#fff0ed;color:#9b3927}
+    .btn:disabled{opacity:.6;cursor:wait}
+    @media(max-width:560px){.session>span:first-child{font-size:0}.session>span:first-child:first-letter{font-size:12px}.content{padding-bottom:28px}}
+</style>
+<style>
+    @media (max-width: 560px) {
+        .shell { display: block; }
+        .sidebar {
+            position: fixed;
+            inset: auto 0 0;
+            z-index: 20;
+            width: 100%;
+            height: auto;
+            min-height: 0;
+            padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+            flex-direction: row;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 -4px 18px rgb(48 40 32 / 12%);
+        }
+        .brand { display: none; }
+        .nav {
+            display: flex;
+            flex: 1;
+            min-width: 0;
+            overflow-x: auto;
+            gap: 2px;
+            margin: 0;
+        }
+        .nav button {
+            flex: 1 0 48px;
+            min-width: 48px;
+            min-height: 50px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 3px;
+            padding: 5px 2px;
+            text-align: center;
+            transform: none;
+        }
+        .nav button:hover { transform: none; }
+        .nav-label { display: block; font-size: 8px; line-height: 1.1; white-space: normal; }
+        .profile { flex: none; margin: 0; padding: 0; gap: 0; }
+        .avatar, .profile-copy { display: none; }
+        .profile form { margin: 0; }
+        .logout { display: block; padding: 10px 6px; font-size: 18px; }
+        .main { width: 100%; min-width: 0; }
+        .content { width: 100%; min-width: 0; padding: 14px 10px 92px; }
+        .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .stat { min-width: 0; padding: 12px; }
+        .stat-number { font-size: 18px; overflow-wrap: anywhere; }
+        .stat-note { line-height: 1.35; }
+        .card { min-width: 0; padding: 12px; }
+        .card-head { flex-wrap: wrap; align-items: flex-start; }
+        .filter-row { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; }
+        .filter-chip { flex: none; white-space: nowrap; }
+        .table-wrap { overflow: visible; }
+        .table-wrap table:not(.order-items) { display: block; width: 100%; min-width: 0; }
+        .table-wrap table:not(.order-items) thead { display: none; }
+        .table-wrap table:not(.order-items) tbody { display: grid; gap: 9px; }
+        .table-wrap table:not(.order-items) tbody tr {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            padding: 5px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+        }
+        .table-wrap table:not(.order-items) tbody td {
+            display: flex;
+            min-width: 0;
+            flex-direction: column;
+            gap: 3px;
+            padding: 7px 6px;
+            border: 0;
+            overflow-wrap: anywhere;
+        }
+        .table-wrap table:not(.order-items) tbody td::before {
+            content: attr(data-label);
+            color: var(--muted);
+            font-size: 9px;
+            font-weight: 700;
+        }
+        .table-wrap table:not(.order-items) tbody td:first-child { display: none; }
+        .table-wrap table:not(.order-items) tbody td:nth-child(2) { grid-column: 1 / -1; }
+        .table-wrap table:not(.order-items) tbody td[colspan] {
+            display: block;
+            grid-column: 1 / -1;
+            padding: 18px 8px;
+            text-align: center;
+        }
+        .table-wrap table:not(.order-items) tbody td[colspan]::before { content: none; }
+        .detail-layout .table-wrap { overflow-x: auto; }
+        .detail-layout table.order-items { display: table; width: 100%; min-width: 500px !important; }
+        .detail-layout table.order-items thead { display: table-header-group; }
+        .detail-layout table.order-items tbody { display: table-row-group; }
+        .detail-layout table.order-items tbody tr { display: table-row; padding: 0; border: 0; background: transparent; }
+        .detail-layout table.order-items tbody td { display: table-cell; padding: 8px; border-bottom: 1px solid var(--line); }
+        .detail-layout table.order-items tbody td::before { display: none; }
+        .toolbar > .input { flex: 1 1 180px; min-width: 0; }
+        .search-input { width: 100%; max-width: 100%; }
+        .topbar { padding-inline: 12px; }
+        .topbar h1 { font-size: 17px; }
+    }
+    .badge.processing { background: #e8f0ff; color: #315b9a; }
+    .badge.ready { background: #e5f4e8; color: #267441; }
+</style>
+</head>
+<body>
+<div class="shell">
+    <aside class="sidebar">
+        <div class="brand"><img class="brand-logo" src="{{ asset('images/solstice-logo.jpeg') }}" alt="Logo Solstice Coffee"><div class="brand-copy"><strong>Solstice Coffee</strong><small>Kasir Panel</small></div></div>
+        <nav class="nav" aria-label="Navigasi kasir">
+            <button class="active" data-view="dashboard" aria-current="page"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg><span class="nav-label">Dashboard</span></button>
+            <button data-view="orders"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span class="nav-label">Daftar Pesanan</span></button>
+            <button data-view="search"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="nav-label">Cari Nama Pelanggan</span></button>
+            <button data-view="verify"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="nav-label">Verifikasi Bayar</span></button>
+            <button data-view="receipt"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span class="nav-label">Cetak Struk</span></button>
+        </nav>
+        <div class="profile"><div class="avatar">{{ strtoupper(substr(auth()->user()->name ?? 'K1', 0, 2)) }}</div><div class="profile-copy"><strong>{{ auth()->user()->name ?? 'Kasir' }}</strong><small>Kasir Shift Pagi</small></div><form method="POST" action="{{ route('logout') }}">@csrf<button class="logout" aria-label="Keluar" title="Keluar">⇥</button></form></div>
+    </aside>
+    <main class="main">
+        <header class="topbar"><h1 id="page-title">Dashboard</h1><div class="session"><span>🔒 <span class="desktop-session">Sesi Kasir Aktif</span></span><span class="shift">Shift #2</span></div></header>
+        <div class="content">
+            <div id="feedback" class="feedback" role="status"></div>
+            <section class="view active" id="view-dashboard">
+                <div class="stats">
+                    <article class="stat"><div class="stat-label">Total Pesanan</div><div class="stat-number" id="stat-total">— Order</div><div class="stat-note">Semua pesanan tercatat</div></article>
+                    <article class="stat"><div class="stat-label">Pesanan Aktif</div><div class="stat-number" id="stat-active">—</div><div class="stat-note">Menunggu konfirmasi kasir</div></article>
+                    <article class="stat"><div class="stat-label">Pesanan Selesai</div><div class="stat-number" id="stat-done">— Order</div><div class="stat-note good">Status selesai</div></article>
+                    <article class="stat highlight"><div class="stat-label">Pendapatan Pesanan Selesai</div><div class="stat-number" id="stat-income">—</div><div class="stat-note">Akumulasi total pesanan berstatus selesai</div></article>
+                </div>
+                <section class="card"><div class="card-head"><div><h2>Aktivitas Pesanan Terbaru</h2><p class="card-subtitle">Pesanan terbaru yang masuk ke sistem</p></div><button class="btn" data-go="orders">Lihat semua pesanan →</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Nama Pelanggan</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="recent-orders"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div></section>
+            </section>
+
+            <section class="view" id="view-orders">
+                <section class="card"><div class="card-head"><div><h2>Daftar Pesanan</h2><p class="card-subtitle">Pantau status pesanan yang masuk.</p></div><button class="btn" data-refresh>↻ Segarkan</button></div><div class="filter-row" id="status-filters"><button class="filter-chip active" data-status="all">Semua</button><button class="filter-chip" data-status="pending">Menunggu konfirmasi kasir</button><button class="filter-chip" data-status="processing">Sedang diproses</button><button class="filter-chip" data-status="ready">Siap disajikan</button><button class="filter-chip" data-status="done">Selesai</button><button class="filter-chip" data-status="rejected">Ditolak</button></div><div class="table-wrap"><table><thead><tr><th>No.</th><th>Nama Pelanggan</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orders-table"><tr><td colspan="6" class="loading">Memuat pesanan…</td></tr></tbody></table></div><div id="orders-empty" class="empty" hidden><div class="empty-icon">☕</div>Belum ada pesanan.</div><div class="orders-pagination" id="orders-pagination" hidden><span class="orders-pagination-summary" id="orders-page-summary"></span><div class="actions"><button class="btn" data-order-page="-1">← Sebelumnya</button><button class="btn" data-order-page="1">Berikutnya →</button></div></div></section>
+            </section>
+
+            <section class="view" id="view-search">
+                <section class="card"><div class="card-head"><div><h2>Cari Nama Pelanggan</h2><p class="card-subtitle">Hanya menampilkan detail pesanan yang sudah selesai.</p></div></div><form class="toolbar" id="search-form"><input class="input search-input" id="search-input" placeholder="Masukkan nama pelanggan" autocomplete="off"><button class="btn primary">⌕ Cari pelanggan</button></form><div id="search-result"></div></section>
+            </section>
+
+            <section class="view" id="view-verify">
+                <p class="page-message">Cari transaksi yang menunggu pembayaran, lalu buka detail pesanan untuk memeriksa item dan total sebelum diproses.</p>
+                <section class="card"><div class="card-head"><div><h2>Verifikasi Bayar</h2><p class="card-subtitle">Cari nama pelanggan untuk menemukan pesanan yang perlu diverifikasi.</p></div></div><form class="toolbar" id="verify-search-form"><input class="input search-input" id="verify-input" placeholder="Masukkan nama pelanggan" autocomplete="off"><button class="btn primary">Cari pelanggan</button></form></section>
+                <div id="verify-result"></div>
+            </section>
+
+            <section class="view" id="view-receipt">
+                <section class="card no-print"><div class="card-head"><div><h2>Cetak Struk</h2><p class="card-subtitle">Cari nama pelanggan untuk menampilkan struk pembelian.</p></div></div><form class="toolbar" id="receipt-search-form"><input class="input search-input" id="receipt-input" placeholder="Masukkan nama pelanggan" autocomplete="off"><button class="btn primary">Cari pelanggan</button></form></section>
+                <div id="receipt-result" class="receipt"><p class="helper">Cari pesanan untuk menampilkan struk.</p></div>
+                <div class="actions no-print" style="justify-content:center;margin-top:14px"><button class="btn primary" id="print-receipt">Cetak Struk Sekarang</button></div>
+            </section>
+        </div>
+    </main>
+</div>
+<script>
+(() => {
+    const api = '/api/kasir';
+    const receiptLogo = @json('/images/solstice-logo.jpeg');
+    const titles = {dashboard:'Dashboard',orders:'Daftar Pesanan',search:'Cari Nama Pelanggan',verify:'Verifikasi Bayar',receipt:'Cetak Struk'};
+    let orders = [], activeFilter = 'all', selectedOrder = null;
+    let orderPage = 1, orderLastPage = 1, orderTotal = 0, orderRequestId = 0;
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const money = value => 'Rp ' + new Intl.NumberFormat('id-ID').format(Number(value || 0));
+    const date = value => {
+        if (!value) return '—';
+        const raw = String(value).trim().replace(' ', 'T');
+        const iso = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw) ? raw : `${raw}Z`;
+        const parsed = new Date(iso);
+        return Number.isNaN(parsed.getTime())
+            ? esc(value)
+            : new Intl.DateTimeFormat('id-ID', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                timeZone: 'Asia/Jakarta',
+            }).format(parsed);
+    };
+    const normalize = status => { const s=String(status||'').toLowerCase(); if(['pending','baru','menunggu pembayaran','menunggu','menunggu konfirmasi kasir'].includes(s))return 'pending'; if(['diproses','processing'].includes(s))return 'processing'; if(['siap','siap disajikan','ready'].includes(s))return 'ready'; if(['selesai','done','completed','lunas'].includes(s))return 'done'; if(['ditolak','rejected'].includes(s))return 'rejected'; return 'other'; };
+    const statusText = status => ({pending:'Menunggu konfirmasi kasir',processing:'Sedang diproses',ready:'Siap disajikan',done:'Selesai',rejected:'Pembayaran ditolak',other:'Status lain'}[normalize(status)]);
+    const badge = status => `<span class="badge ${normalize(status)}">${esc(statusText(status))}</span>`;
+    const get = (obj,...keys) => { for(const key of keys)if(obj?.[key]!==undefined&&obj?.[key]!==null)return obj[key]; return null; };
+
+    async function request(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                ...(options.headers || {}),
+            },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Permintaan gagal.');
+        return data;
+    }
+
+    function notify(message,type='success'){const node=document.getElementById('feedback');node.textContent=message;node.className=`feedback show ${type}`;window.clearTimeout(notify.timer);notify.timer=window.setTimeout(()=>node.className='feedback',4500)}
+    function switchView(name){document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id===`view-${name}`));document.querySelectorAll('.nav button').forEach(el=>el.classList.toggle('active',el.dataset.view===name));document.getElementById('page-title').textContent=titles[name];if(name==='orders')renderOrders()}
+    function row(order,index){const id=get(order,'order_id','id_pesanan')||'—';const customer=get(order,'nama_pelanggan','nama','customer_name')||'—';const amount=get(order,'total_harga','total')||0;const status=get(order,'status','status_pesanan')||'pending';return `<tr><td data-label="No.">${index+1}</td><td class="order-id" data-label="Nama Pelanggan">${esc(customer)}</td><td data-label="Tanggal">${date(get(order,'tanggal','created_at'))}</td><td class="amount" data-label="Total">${money(amount)}</td><td data-label="Status">${badge(status)}</td><td data-label="Aksi"><button class="btn" data-detail="${esc(id)}">Detail</button></td></tr>`}
+    function renderOrders(){
+        const table=document.getElementById('orders-table');
+        const start=orderTotal?(orderPage-1)*25:0;
+        document.getElementById('orders-empty').hidden=true;
+        table.innerHTML=orders.length?orders.map((order,index)=>row(order,start+index)).join(''):`<tr><td colspan="6" class="empty">${activeFilter==='all'?'Belum ada pesanan.':'Tidak ada pesanan pada status ini.'}</td></tr>`;
+        const pagination=document.getElementById('orders-pagination');
+        pagination.hidden=orderTotal===0;
+        document.getElementById('orders-page-summary').textContent=`Menampilkan ${start+1}–${Math.min(start+orders.length,orderTotal)} dari ${orderTotal} pesanan`;
+        pagination.querySelector('[data-order-page="-1"]').disabled=orderPage<=1;
+        pagination.querySelector('[data-order-page="1"]').disabled=orderPage>=orderLastPage;
+    }
+    async function loadOrders(){
+        const requestId=++orderRequestId;
+        const page=orderPage;
+        const filter=activeFilter;
+        const params=new URLSearchParams({page:String(page)});
+        if(filter!=='all')params.set('status',filter);
+        try{
+            const result=await request(`${api}/orders?${params}`);
+            if(requestId!==orderRequestId)return;
+            orders=Array.isArray(result.data)?result.data:[];
+            orderPage=Number(result.current_page||1);
+            orderLastPage=Number(result.last_page||1);
+            orderTotal=Number(result.total||0);
+            renderOrders();
+        }catch(error){
+            if(requestId!==orderRequestId)return;
+            orders=[];orderTotal=0;
+            document.getElementById('orders-pagination').hidden=true;
+            document.getElementById('orders-table').innerHTML=`<tr><td colspan="6" class="empty">${esc(error.message)}. Coba segarkan halaman.</td></tr>`;
+        }
+    }
+    async function loadData(){
+        try{
+            const [stats]=await Promise.all([request(`${api}/dashboard`),loadOrders()]);
+            document.getElementById('stat-total').textContent=`${get(stats,'jumlah_pesanan')||0} Order`;
+            document.getElementById('stat-active').textContent=`${get(stats,'pending_payment')||0} Pesanan`;
+            document.getElementById('stat-done').textContent=`${get(stats,'completed_orders')||0} Order`;
+            document.getElementById('stat-income').textContent=money(get(stats,'completed_income')||0);
+            const recent=Array.isArray(stats.recent_orders)?stats.recent_orders:[];
+            document.getElementById('recent-orders').innerHTML=recent.length?recent.map(row).join(''):`<tr><td colspan="6" class="empty">Belum ada pesanan.</td></tr>`;
+        }catch(error){
+            document.getElementById('recent-orders').innerHTML=`<tr><td colspan="6" class="empty">${esc(error.message)}. Coba segarkan halaman.</td></tr>`;
+        }
+    }
+
+    function orderDetail(order) {
+        selectedOrder = order;
+
+        const id = get(order, 'order_id', 'id_pesanan') || '—';
+        const status = get(order, 'status', 'status_pesanan') || 'pending';
+        const stage = normalize(status);
+        const total = Number(get(order, 'total_harga', 'total') || 0);
+        const items = Array.isArray(order.items) ? order.items : [];
+        const subtotal = Number(get(order, 'subtotal') ?? items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0));
+        const tax = Number(get(order, 'pajak') ?? Math.max(0, total - subtotal));
+        const method = String(get(order, 'metode_pembayaran') || 'CASH').toUpperCase();
+        const isPending = stage === 'pending';
+        const itemRows = items.length ? items.map(item =>
+            '<tr><td>' + esc(item.nama_menu || 'Menu') + '</td><td>' + esc(item.jumlah_pesanan || 0) + '</td><td>' + money(item.harga_satuan) + '</td><td>' + money(item.subtotal) + '</td></tr>'
+        ).join('') : '<tr><td colspan="4" class="empty">Rincian produk tidak tersedia.</td></tr>';
+        const paidMarkup = isPending && method === 'CASH'
+            ? '<input class="input cash-input" type="number" min="0" step="1" inputmode="numeric" data-cash-amount data-total="' + total + '" placeholder="Masukkan uang yang diterima">'
+            : money(get(order, 'uang_dibayar') ?? total);
+        const change = isPending ? 0 : Number(get(order, 'kembalian') || 0);
+
+        let action = '';
+
+        if (stage === 'pending') {
+            const rejectButton = '<button class="btn reject" data-reject="' + esc(id) + '">Tolak Pembayaran</button>';
+            action = method === 'QRIS'
+                ? '<article class="card"><h2>Konfirmasi Pembayaran</h2><p class="helper">Pembayaran dengan metode QRIS telah dikonfirmasi.</p><div class="divider"></div><div class="payment-actions"><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Pembayaran</button>' + rejectButton + '</div></article>'
+                : '<article class="card"><h2>Verifikasi Bayar</h2><p class="helper">Pastikan pembayaran sudah diterima sebelum dikonfirmasi.</p><div class="divider"></div><div class="payment-actions"><button class="btn primary" data-verify="' + esc(id) + '">Konfirmasi Bayar</button>' + rejectButton + '</div></article>';
+        } else if (stage === 'processing') {
+            action = '<article class="card"><h2>Pesanan Sedang Diproses</h2><p class="helper">Pembayaran telah dikonfirmasi. Pesanan sedang diproses di dapur.</p><div class="divider"></div><button class="btn primary" data-next-status="siap" data-order-status="' + esc(id) + '">Tandai Siap Disajikan</button></article>';
+        } else if (stage === 'ready') {
+            action = '<article class="card"><h2>Pesanan Siap Disajikan</h2><p class="helper">Tandai selesai setelah pesanan diserahkan kepada pelanggan.</p><div class="divider"></div><button class="btn primary" data-next-status="selesai" data-order-status="' + esc(id) + '">Selesaikan Pesanan</button></article>';
+        } else if (stage === 'done') {
+            action = method === 'QRIS'
+                ? '<article class="card"><h2>Pesanan Selesai</h2><p class="helper">Pembayaran QRIS telah dikonfirmasi dan pesanan sudah diserahkan.</p></article>'
+                : '<article class="card"><h2>Pesanan Selesai</h2><p class="helper">Pembayaran terkonfirmasi dan pesanan sudah diserahkan.</p></article>';
+        } else if (stage === 'rejected') {
+            action = '<article class="card"><h2>Pembayaran Ditolak</h2><p class="helper">Pesanan ini tidak diproses. Silakan hubungi kasir untuk informasi lebih lanjut.</p></article>';
+        } else {
+            action = '<article class="card"><h2>Status pesanan lama</h2><p class="helper">Silakan tanyakan kepada kasir untuk memastikan status pesanan ini.</p></article>';
+        }
+
+        return '<section class="detail-layout">' +
+            '<article class="card" data-order-card><div class="card-head"><div><h2>Rincian Pesanan #' + esc(id) + '</h2><p class="card-subtitle">' + badge(status) + '</p></div></div>' +
+            '<dl class="detail-list"><dt>Order ID</dt><dd>' + esc(id) + '</dd>' +
+            '<dt>Waktu pesan</dt><dd>' + date(get(order, 'tanggal', 'created_at')) + '</dd>' +
+            '<dt>Pelanggan</dt><dd>' + esc(get(order, 'nama_pelanggan', 'nama', 'customer_name') || 'Informasi pelanggan tidak tersedia') + '</dd>' +
+            '<dt>No. meja</dt><dd>' + esc(get(order, 'nomor_meja', 'meja') || '—') + '</dd>' +
+            '<dt>Catatan</dt><dd>' + esc(get(order, 'catatan') || '—') + '</dd></dl>' +
+            '<div class="divider"></div><h3 class="card-subtitle">Rincian produk</h3><div class="table-wrap"><table class="order-items"><thead><tr><th>Nama produk</th><th>Jumlah</th><th>Harga satuan</th><th>Subtotal</th></tr></thead><tbody>' + itemRows + '</tbody></table></div>' +
+            '<div class="divider"></div><dl class="detail-list"><dt>Metode pembayaran</dt><dd>' + esc(method === 'QRIS' ? 'QRIS' : method) + '</dd>' +
+            '<dt>Subtotal</dt><dd>' + money(subtotal) + '</dd>' +
+            '<dt>Pajak (PB1 10%)</dt><dd>' + money(tax) + '</dd>' +
+            '<dt>Uang diterima</dt><dd>' + paidMarkup + '</dd>' +
+            '<dt>Kembalian</dt><dd data-change-preview>' + money(change) + '</dd>' +
+            '<dt>Total pembayaran</dt><dd><strong>' + money(total) + '</strong></dd></dl>' +
+            (isPending && method === 'CASH' ? '<p class="helper cash-hint" data-cash-hint>Masukkan nominal yang diterima kasir untuk menghitung kembalian.</p>' : '') +
+            '</article>' + action + '</section>';
+    }
+
+    async function findOrder(id){if(!id.trim())throw new Error('Pesanan tidak ditemukan.');return request(`${api}/orders/${encodeURIComponent(id.trim())}`)}
+    async function findOrdersByCustomer(name,status=''){if(!name.trim())throw new Error('Masukkan nama pelanggan terlebih dahulu.');const params=new URLSearchParams({nama:name.trim()});if(status)params.set('status',status);return request(`${api}/orders/search?${params.toString()}`)}
+    function customerOrderMatches(orders,purpose){
+        if(purpose==='search'){
+            const completedStatuses=['selesai','done','completed','lunas'];
+            orders=Array.isArray(orders)?orders.filter(order=>completedStatuses.includes(String(get(order,'status','status_pesanan')||'').trim().toLowerCase())):[];
+            if(!orders.length)return '<div class="empty">Tidak ada pesanan selesai untuk nama pelanggan tersebut.</div>';
+        }
+        if(!Array.isArray(orders)||!orders.length)return '<div class="empty">Pesanan tidak ditemukan.</div>';
+        const actionLabel=purpose==='receipt'?'Tampilkan struk':purpose==='verify'?'Detail Pesanan':'Lihat detail';
+        return '<div class="grid gap-3">'+orders.map(order=>{
+            const id=get(order,'order_id','id_pesanan')||'';
+            const reference=purpose==='verify'?date(get(order,'tanggal','created_at')):'Order '+esc(id)+' · '+date(get(order,'tanggal','created_at'));
+            return '<article class="card"><div class="card-head"><div><h2>'+esc(get(order,'nama_pelanggan')||'Pelanggan')+'</h2><p class="card-subtitle">'+reference+'</p></div>'+badge(get(order,'status','status_pesanan'))+'</div><div class="receipt-row"><span>'+(purpose==='verify'?'Total tagihan':'Total pesanan')+'</span><strong>'+money(get(order,'total_harga','total'))+'</strong></div><button class="btn primary" data-customer-order="'+esc(id)+'" data-customer-purpose="'+purpose+'">'+actionLabel+'</button></article>';
+        }).join('')+'</div>';
+    }
+    function receipt(order) {
+        const id = get(order, 'order_id', 'id_pesanan') || '—';
+        const items = Array.isArray(order.items) ? order.items : [];
+        const subtotal = Number(get(order, 'subtotal') ?? items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0));
+        const total = Number(get(order, 'total_harga', 'total') || 0);
+        const tax = Number(get(order, 'pajak') ?? Math.max(0, total - subtotal));
+        const method = String(get(order, 'metode_pembayaran') || '—').toUpperCase();
+        const itemRows = items.length
+            ? items.map(item => `<div class="receipt-product">
+                <strong>${esc(item.nama_menu || 'Menu')}</strong>
+                <div class="receipt-row"><span>${esc(item.jumlah_pesanan || 0)} × ${money(item.harga_satuan)}</span><span>${money(item.subtotal)}</span></div>
+            </div>`).join('')
+            : '<p>Rincian produk tidak tersedia.</p>';
+
+        return `<img class="receipt-logo" src="${esc(receiptLogo)}" alt="Logo Solstice Coffee" width="64" height="64"><h2>Solstice Coffee</h2><p class="receipt-address">Jl. Soekarno Hatta No.252, Kopo, Kec Bojongloa Kaler, Kota Bandung, Jawa Barat 40223</p>
+            <hr>
+            <div class="receipt-row"><span>Order ID</span><strong>${esc(id)}</strong></div>
+            <div class="receipt-row"><span>Waktu pesan</span><span>${date(get(order, 'tanggal', 'created_at'))}</span></div>
+            <div class="receipt-row"><span>Pelanggan</span><span>${esc(get(order, 'nama_pelanggan', 'nama', 'customer_name') || '—')}</span></div>
+            <div class="receipt-row"><span>Metode bayar</span><span>${esc(method)}</span></div>
+            <hr><strong>Rincian produk</strong>${itemRows}
+            <hr><div class="receipt-row"><span>Catatan</span><span>${esc(get(order, 'catatan') || '—')}</span></div>
+            <div class="receipt-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
+            <div class="receipt-row"><span>Pajak</span><span>${money(tax)}</span></div>
+            <div class="receipt-row receipt-total"><span>Total pembayaran</span><span>${money(total)}</span></div>
+            <div class="receipt-row"><span>Uang diterima</span><span>${money(get(order, 'uang_dibayar') ?? total)}</span></div>
+            <div class="receipt-row"><span>Kembalian</span><span>${money(get(order, 'kembalian'))}</span></div>
+            <hr><p>Terima kasih telah berkunjung ☕</p><p>Solstice Coffee</p>`;
+    }
+
+    async function printReceipt() {
+        const receipt = document.getElementById('receipt-result');
+        if (!receipt || !receipt.textContent.trim() || receipt.querySelector('.helper')) {
+            notify('Tampilkan struk terlebih dahulu sebelum mencetak.', 'error');
+            return;
+        }
+
+        await document.fonts?.ready;
+        const previousWidth = receipt.style.width;
+        receipt.style.width = '80mm';
+        const heightMm = Math.ceil(receipt.getBoundingClientRect().height * 25.4 / 96 + 2);
+        const pageStyle = document.createElement('style');
+        pageStyle.id = 'receipt-page-size';
+        pageStyle.textContent = `@page { size: 80mm ${heightMm}mm; margin: 0 }`;
+        document.head.appendChild(pageStyle);
+
+        const cleanup = () => {
+            pageStyle.remove();
+            receipt.style.width = previousWidth;
+            window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup, { once: true });
+        window.print();
+    }
+    document.addEventListener('click', async event => {
+        const nav = event.target.closest('[data-view]');
+        if (nav) switchView(nav.dataset.view);
+
+        const go = event.target.closest('[data-go]');
+        if (go) switchView(go.dataset.go);
+
+        if (event.target.closest('[data-refresh]')) loadData();
+
+        const pageButton=event.target.closest('[data-order-page]');
+        if(pageButton){
+            orderPage=Math.min(orderLastPage,Math.max(1,orderPage+Number(pageButton.dataset.orderPage)));
+            loadOrders();
+        }
+
+        const filter = event.target.closest('[data-status]');
+        if (filter) {
+            activeFilter = filter.dataset.status;
+            orderPage = 1;
+            document.querySelectorAll('.filter-chip').forEach(el => el.classList.toggle('active', el === filter));
+            loadOrders();
+        }
+
+        const detail = event.target.closest('[data-detail]');
+        if (detail) {
+            try {
+                const order = await findOrder(detail.dataset.detail);
+                const stage = normalize(get(order, 'status', 'status_pesanan'));
+                const canAdvance = ['pending', 'processing', 'ready'].includes(stage);
+                switchView(canAdvance ? 'verify' : 'search');
+                document.getElementById(canAdvance ? 'verify-result' : 'search-result').innerHTML = orderDetail(order);
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        const customerOrder = event.target.closest('[data-customer-order]');
+        if (customerOrder) {
+            try {
+                const order = await findOrder(customerOrder.dataset.customerOrder);
+                const purpose = customerOrder.dataset.customerPurpose;
+                if (purpose === 'receipt') {
+                    selectedOrder = order;
+                    document.getElementById('receipt-result').innerHTML = receipt(order);
+                } else {
+                    const target = purpose === 'verify' ? 'verify-result' : 'search-result';
+                    document.getElementById(target).innerHTML = orderDetail(order);
+                }
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        const verify = event.target.closest('[data-verify]');
+        if (verify) {
+            try {
+                const orderDetails = verify.closest('.detail-layout') || verify.closest('[data-order-card]');
+                const cashInput = orderDetails?.querySelector('[data-cash-amount]');
+                const options = { method: 'PUT' };
+
+                if (cashInput) {
+                    const amount = Number(cashInput.value);
+                    const total = Number(cashInput.dataset.total || 0);
+                    if (!cashInput.value || amount < total) {
+                        notify('Uang yang diterima harus sama dengan atau lebih dari total pembayaran.', 'error');
+                        cashInput.focus();
+                        return;
+                    }
+
+                    options.headers = { 'Content-Type': 'application/json' };
+                    options.body = JSON.stringify({ bayar: amount });
+                }
+
+                await request(api + '/orders/' + encodeURIComponent(verify.dataset.verify) + '/verify', options);
+                notify('Pembayaran berhasil diverifikasi.');
+                const order = await findOrder(verify.dataset.verify);
+                document.getElementById('verify-result').innerHTML = orderDetail(order);
+                loadData();
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        const reject = event.target.closest('[data-reject]');
+        if (reject) {
+            if (!window.confirm('Tolak pembayaran dan batalkan pesanan ini?')) return;
+
+            try {
+                await request(api + '/orders/' + encodeURIComponent(reject.dataset.reject) + '/reject', { method: 'PUT' });
+                notify('Pembayaran ditolak.');
+                const order = await findOrder(reject.dataset.reject);
+                document.getElementById('verify-result').innerHTML = orderDetail(order);
+                loadData();
+                loadOrders();
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        const nextStatus = event.target.closest('[data-next-status]');
+        if (nextStatus) {
+            try {
+                await request(api + '/orders/' + encodeURIComponent(nextStatus.dataset.orderStatus) + '/status', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: nextStatus.dataset.nextStatus }),
+                });
+                notify(nextStatus.dataset.nextStatus === 'siap' ? 'Pesanan ditandai siap disajikan.' : 'Pesanan selesai.');
+                const order = await findOrder(nextStatus.dataset.orderStatus);
+                switchView('verify');
+                document.getElementById('verify-result').innerHTML = orderDetail(order);
+                loadData();
+                loadOrders();
+            } catch (error) {
+                notify(error.message, 'error');
+            }
+        }
+
+        if (event.target.closest('#print-receipt')) await printReceipt();
+    });
+
+    document.addEventListener('input', event => {
+        const input = event.target.closest('[data-cash-amount]');
+        if (!input) return;
+
+        const card = input.closest('[data-order-card]');
+        const amount = Number(input.value || 0);
+        const total = Number(input.dataset.total || 0);
+        const preview = card?.querySelector('[data-change-preview]');
+        const hint = card?.querySelector('[data-cash-hint]');
+
+        if (preview) preview.textContent = money(Math.max(0, amount - total));
+        if (hint) hint.textContent = !input.value
+            ? 'Masukkan nominal yang diterima kasir untuk menghitung kembalian.'
+            : amount < total
+                ? `Uang masih kurang ${money(total - amount)}.`
+                : `Kembalian: ${money(amount - total)}.`;
+    });
+
+    document.getElementById('search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('search-result');box.innerHTML='<div class="loading">Mencari pesanan yang sudah selesai…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('search-input').value,'completed'),'search')}catch(error){box.innerHTML=`<div class="empty">${esc(error.message)}</div>`}});
+    document.getElementById('verify-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('verify-result');box.innerHTML='<div class="loading">Mencari transaksi yang menunggu pembayaran…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('verify-input').value,'pending'),'verify')}catch(error){box.innerHTML=`<div class="card empty">${esc(error.message)}</div>`}});
+    document.getElementById('receipt-search-form').addEventListener('submit',async event=>{event.preventDefault();const box=document.getElementById('receipt-result');box.innerHTML='<div class="loading">Mencari pesanan pelanggan…</div>';try{box.innerHTML=customerOrderMatches(await findOrdersByCustomer(document.getElementById('receipt-input').value),'receipt')}catch(error){box.innerHTML=`<p class="helper">${esc(error.message)}</p>`}});
+    loadData();
+})();
+</script>
+</body>
+</html>

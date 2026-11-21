@@ -1,0 +1,466 @@
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+
+(() => {
+  const productsEl = document.getElementById("products"), cart = /* @__PURE__ */ new Map();
+  let products = [], category = "all", query = "", payment = "CASH";
+  let qrisScanner = null, resolveQrisScan = null;
+  const tableParam = new URLSearchParams(window.location.search).get("meja");
+  const tableNumber = /^0?[1-4]$/.test(tableParam || "") ? Number(tableParam) : null;
+  let lastOrderId = sessionStorage.getItem("solsticeLastOrderId");
+  let trackingRequestInFlight = false;
+  const trackLastOrderButton = document.getElementById("track-last-order");
+
+  function syncTrackLastOrderButton() {
+    if (trackLastOrderButton) {
+      trackLastOrderButton.hidden = !lastOrderId;
+    }
+  }
+
+  syncTrackLastOrderButton();
+  const format = (value) => "Rp " + new Intl.NumberFormat("id-ID").format(Number(value || 0));
+  const itemStock = (item) => {
+    const value = item?.stok ?? item?.stock;
+    const stock = Number(value);
+    return value !== null && value !== void 0 && Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : null;
+  };
+  const menuOrderable = (item) => {
+    const active = item?.is_active;
+    const activeFlag = active === undefined || active === null || active === true || active === 1 || active === "1";
+    const status = String(item?.status ?? "").trim().toLowerCase();
+    return activeFlag && (!status || status === "tersedia") && itemStock(item) !== 0;
+  };
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const itemId = (item) => String(item.id_menu ?? item.id ?? item.nama_menu);
+  const itemName = (item) => item.nama_menu ?? item.name ?? "Menu Solstice";
+  const itemPrice = (item) => Number(item.harga ?? item.price ?? 0);
+  const categoryKey = (item) => {
+    const value = String(item.nama_kategori ?? item.kategori ?? "").toLowerCase();
+    if (value.includes("non")) return "non-coffee";
+    if (value.includes("makan") || value.includes("snack")) return "makanan";
+    if (value.includes("coffee") || value.includes("kopi")) return "coffee";
+    return "lainnya";
+  };
+  const quantity = () => [...cart.values()].reduce((sum, line) => sum + line.quantity, 0);
+  const subtotal = () => [...cart.values()].reduce((sum, line) => sum + itemPrice(line.item) * line.quantity, 0);
+  const tax = () => Math.round(subtotal() * 0.1);
+  const total = () => subtotal() + tax();
+  const toast = (message) => {
+    const node = document.getElementById("toast");
+    node.textContent = message;
+    node.classList.add("show");
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => node.classList.remove("show"), 2400);
+  };
+  async function finishQrisScan(scanned) {
+    const scanner = qrisScanner;
+    const resolve = resolveQrisScan;
+    qrisScanner = null;
+    resolveQrisScan = null;
+
+    if (scanner) {
+      try {
+        if (scanner.isScanning) await scanner.stop();
+      } catch (_) {}
+      try { scanner.clear(); } catch (_) {}
+    }
+
+    document.getElementById("qris-scanner-modal").hidden = true;
+    resolve?.(scanned);
+  }
+
+  function scanQris() {
+    const modal = document.getElementById("qris-scanner-modal");
+    const message = document.getElementById("qris-scanner-message");
+    modal.hidden = false;
+    message.textContent = "Buka halaman QRIS di perangkat lain, lalu arahkan kamera ke kode QR tersebut.";
+
+    const scanner = new Html5Qrcode("qris-reader", {
+      formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+      verbose: false,
+    });
+    qrisScanner = scanner;
+
+    return new Promise((resolve) => {
+      resolveQrisScan = resolve;
+      requestAnimationFrame(() => {
+        scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 240, height: 240 } },
+          (decodedText) => {
+            try {
+              const scanned = new URL(decodedText, window.location.origin);
+              const validQris = scanned.origin === window.location.origin
+                && scanned.pathname === "/qris/scan"
+                && scanned.searchParams.get("token") === "solstice";
+
+              if (!validQris) {
+                message.textContent = "Kode QRIS tidak cocok. Gunakan kode dari halaman QRIS.";
+                return;
+              }
+
+              message.textContent = "QRIS terbaca. Tidak ada pembayaran uang nyata.";
+              void finishQrisScan(true);
+            } catch (_) {
+              message.textContent = "Kode tidak valid. Arahkan kamera ke QRIS Solstice.";
+            }
+          },
+          () => {}
+        ).catch(() => {
+          message.textContent = "Kamera gagal dibuka. Izinkan akses kamera dan gunakan HTTPS atau localhost.";
+          void finishQrisScan(false);
+        });
+      });
+    });
+  }
+
+  document.getElementById("qris-scanner-cancel").addEventListener("click", () => {
+    void finishQrisScan(false);
+  });
+  const qrisUrl = `${window.location.origin}/qris`;
+  document.getElementById("qris-url").textContent = qrisUrl;
+  document.getElementById("copy-qris-url").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(qrisUrl);
+      toast("URL QRIS disalin. Buka di laptop atau perangkat lain.");
+    } catch (_) {
+      toast("Salin URL QRIS yang tampil di atas ke perangkat lain.");
+    }
+  });
+  const picture = (item) => {
+    const name = itemName(item).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const mapped = name.includes("ice kopi susu aren") ? "/images/menu/Ice%20Kopi%20Susu%20Aren.jpeg"
+      : name.includes("ice caramel macchiato") || name.includes("iced caramel macchiato") ? "/images/menu/Ice%20Caramel%20Macchiato.jpeg"
+      : name.includes("matcha latte") ? "/images/menu/matcha-latte.jpg"
+      : name.includes("almond croissant") ? "/images/menu/Almond%20Croissant.jpg"
+      : name.includes("nasi goreng") ? "/images/menu/Nasi%20Goreng.jpeg"
+      : name.includes("air dingin") ? "/images/menu/Air%20Dingin.jpeg"
+      : name.includes("ayam goreng") ? "/images/menu/ayam-goreng.jpg"
+      : name.includes("caffe latte") || name.includes("cafe latte") ? "/images/menu/caffe-latte.jpg"
+      : name.includes("kwetiaw") || name.includes("kwetiau") ? "/images/menu/Mie%20Kwetiaw.jpeg"
+      : null;
+    const photo = item.foto;
+    const fallback = categoryKey(item) === "coffee" ? "\u2615" : categoryKey(item) === "makanan" ? "\u{1F950}" : "\u{1F375}";
+    let url = null;
+    if (photo) {
+      const value = String(photo).replace(/\\/g, "/").replace(/^public\//i, "").replace(/^\/+/, "");
+      url = /^https?:\/\//i.test(photo) ? photo : /^(images|storage)\//i.test(value) ? `/${value}` : `/storage/${value}`;
+    }
+    if (!url) url = mapped;
+    if (!url) return `<span class="fallback" aria-hidden="true">${fallback}</span>`;
+    return `<img loading="lazy" decoding="async" style="display:block;width:100%;height:100%;object-fit:contain!important;object-position:center" src="${escapeHtml(url)}" alt="${escapeHtml(itemName(item))}" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="fallback" aria-hidden="true" hidden>${fallback}</span>`;
+  };
+  function renderProducts() {
+    const shown = products.filter((item) => (category === "all" || categoryKey(item) === category) && `${itemName(item)} ${item.deskripsi || ""}`.toLowerCase().includes(query.toLowerCase()));
+    productsEl.innerHTML = shown.length ? shown.map((item) => {
+      const id = itemId(item), amount = cart.get(id)?.quantity || 0;
+      const stock = itemStock(item);
+      const status = String(item.status ?? "").trim().toLowerCase();
+      const unavailable = !menuOrderable(item);
+      const availabilityLabel = stock === 0 || status === "habis" ? "Menu habis" : "Tidak tersedia";
+      const stockLabel = unavailable ? availabilityLabel : stock === null ? "" : amount >= stock ? `Stok: ${stock} · batas tercapai` : `Stok tersedia: ${stock}`;
+      return `<article class="product"><div class="product-photo">${picture(item)}</div><div class="product-body"><h2 class="product-title">${escapeHtml(itemName(item))}</h2><div class="product-desc">${escapeHtml(item.deskripsi || item.nama_kategori || "Dibuat segar untuk Anda")}</div>${stockLabel ? `<div class="stock-note${unavailable ? " stock-note--empty" : ""}" role="status">${escapeHtml(stockLabel)}</div>` : ""}<div class="product-bottom"><span class="price">${format(itemPrice(item))}</span><button class="add" data-add="${escapeHtml(id)}" aria-label="Tambah ${escapeHtml(itemName(item))} ke keranjang" ${unavailable ? 'disabled aria-disabled="true"' : ""}>${unavailable ? availabilityLabel : amount ? `+ Tambah (${amount})` : "+ Tambah"}</button></div></div></article>`;
+    }).join("") : `<div class="empty">${products.length ? "Menu tidak ditemukan. Coba kata kunci lain." : "Menu belum tersedia saat ini."}</div>`;
+  }
+  function renderCart() {
+    const lines = [...cart.values()];
+    document.getElementById("cart-count").textContent = `${quantity()} item dipilih`;
+    document.getElementById("cart-sum").textContent = format(total());
+    const rows = lines.map(({ item, quantity: q }) => `<div class="cart-item"><div><div class="item-name">${escapeHtml(itemName(item))}</div><div class="item-price">${format(itemPrice(item))} per item</div></div><div class="qty"><button data-qty="${escapeHtml(itemId(item))}" data-delta="-1" aria-label="Kurangi">\u2212</button><strong>${q}</strong><button data-qty="${escapeHtml(itemId(item))}" data-delta="1" aria-label="Tambah">+</button></div><div class="item-total">${format(itemPrice(item) * q)}</div></div>`).join("");
+    document.getElementById("cart-items").innerHTML = rows || '<div class="empty">Keranjang masih kosong. Yuk, pilih menu favoritmu!</div>';
+    document.getElementById("cart-totals").innerHTML = totalsMarkup();
+    document.getElementById("checkout-items").innerHTML = rows || '<div class="empty">Belum ada item.</div>';
+    document.getElementById("checkout-totals").innerHTML = totalsMarkup();
+    document.getElementById("go-checkout").disabled = !lines.length;
+    document.getElementById("go-checkout").style.opacity = lines.length ? "1" : ".55";
+    renderProducts();
+  }
+  function totalsMarkup() {
+    return `<div class="total-row"><span>Subtotal</span><strong>${format(subtotal())}</strong></div><div class="total-row"><span>PB1 (Pajak 10%)</span><strong>${format(tax())}</strong></div><div class="total-row grand"><span>Total pembayaran</span><strong>${format(total())}</strong></div>`;
+  }
+
+  async function refreshTrackingStatus() {
+    const message = document.getElementById("tracking-message");
+
+    if (!lastOrderId) {
+      if (message) message.textContent = "Belum ada pesanan yang bisa dilacak.";
+      return;
+    }
+
+    if (trackingRequestInFlight) return;
+    trackingRequestInFlight = true;
+
+    try {
+      const response = await fetch(`/api/pesanan/${encodeURIComponent(lastOrderId)}`, {
+        headers: { Accept: "application/json" },
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.message || `Gagal memuat status (${response.status}).`);
+      }
+
+      const states = {
+        pending: {
+          currentStep: 1,
+          message: "Pesanan diterima. Menunggu konfirmasi pembayaran dari kasir.",
+        },
+        diproses: {
+          currentStep: 2,
+          message: "Pembayaran dikonfirmasi. Pesanan Anda sedang diproses.",
+        },
+        siap: {
+          currentStep: 3,
+          message: "Pesanan siap disajikan.",
+        },
+        selesai: {
+          finished: true,
+          currentStep: 4,
+          message: "Pesanan selesai dan sudah diserahkan. Terima kasih!",
+        },
+        ditolak: {
+          rejected: true,
+          currentStep: 1,
+          message: "Pesanan ditolak oleh kasir dan tidak diproses. Silakan hubungi kasir.",
+        },
+      };
+      const state = states[result.status] || {
+        currentStep: 1,
+        message: "Status pesanan belum tersedia. Silakan tanyakan kepada kasir.",
+      };
+
+      if (message) message.textContent = state.message;
+
+      document.querySelectorAll("[data-track-step]").forEach((step) => {
+        const number = Number(step.dataset.trackStep);
+        const done = state.finished || number < state.currentStep;
+        step.classList.toggle("done", done);
+        step.classList.toggle("current", !state.finished && !state.rejected && number === state.currentStep);
+        step.classList.toggle("rejected", Boolean(state.rejected) && number === state.currentStep);
+
+        const mark = step.querySelector(".step-mark");
+        if (mark) mark.textContent = state.rejected && number === state.currentStep ? "×" : done ? "✓" : String(number);
+      });
+    } catch (error) {
+      if (message) message.textContent = error.message || "Status pesanan gagal dimuat. Coba lagi.";
+    } finally {
+      trackingRequestInFlight = false;
+    }
+  }
+
+  function showPage(name) {
+    if (!document.getElementById(`page-${name}`)) return;
+    if (name === "cart" && !quantity()) {
+      toast("Keranjang masih kosong. Pilih menu dahulu.");
+      return;
+    }
+    document.querySelectorAll(".page").forEach((page) => page.classList.toggle("active", page.id === `page-${name}`));
+    document.getElementById("cartbar").style.display = ["menu", "cart"].includes(name) ? "flex" : "none";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (name === "cart") renderCart();
+    if (name === "checkout") renderCart();
+    if (name === "tracking") void refreshTrackingStatus();
+  }
+  async function loadMenu() {
+    try {
+      const response = await fetch("/api/menu", { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error("Tidak dapat memuat menu");
+      const data = await response.json();
+      products = Array.isArray(data) ? data : data.data || [];
+      for (const line of cart.values()) {
+        const latest = products.find((item) => itemId(item) === itemId(line.item));
+        if (latest) line.item = latest;
+      }
+      renderCart();
+    } catch (error) {
+      productsEl.innerHTML = '<div class="empty">Menu belum dapat dimuat. Periksa koneksi lalu coba lagi.</div>';
+    }
+  }
+  document.addEventListener("click", (event) => {
+    const filter = event.target.closest("[data-category]");
+    if (filter) {
+      category = filter.dataset.category;
+      document.querySelectorAll(".filter").forEach((button) => {
+        const selected = button === filter;
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
+      renderProducts();
+    }
+    const add = event.target.closest("[data-add]");
+    if (add) {
+      const item = products.find((product) => itemId(product) === add.dataset.add);
+      if (!item) return;
+      if (!menuOrderable(item)) {
+        toast(`${itemName(item)} sedang tidak tersedia.`);
+        return;
+      }
+      const line = cart.get(add.dataset.add);
+      const stock = itemStock(item);
+      if (stock !== null && (line?.quantity || 0) >= stock) {
+        toast(`Stok ${itemName(item)} hanya ${stock} item. Jumlah pesanan sudah mencapai stok.`);
+        return;
+      }
+      cart.set(add.dataset.add, { item, quantity: (line?.quantity || 0) + 1 });
+      renderCart();
+    }
+    const change = event.target.closest("[data-qty]");
+    if (change) {
+      const line = cart.get(change.dataset.qty);
+      if (line) {
+        const delta = Number(change.dataset.delta);
+        const stock = itemStock(line.item);
+        if (delta > 0 && !menuOrderable(line.item)) {
+          toast(`${itemName(line.item)} sedang tidak tersedia.`);
+          return;
+        }
+        if (delta > 0 && stock !== null && line.quantity >= stock) {
+          toast(`Stok ${itemName(line.item)} hanya ${stock} item. Jumlah pesanan sudah mencapai stok.`);
+          return;
+        }
+        line.quantity += delta;
+        if (line.quantity <= 0) cart.delete(change.dataset.qty);
+        renderCart();
+      }
+    }
+    const page = event.target.closest("[data-page]");
+    if (page) showPage(page.dataset.page);
+    const trackLastOrder = event.target.closest("#track-last-order");
+    if (trackLastOrder && lastOrderId) {
+      document.getElementById("track-order").textContent = `#${lastOrderId}`;
+      showPage("tracking");
+    }
+    const option = event.target.closest("[data-payment]");
+    if (option) {
+      payment = option.dataset.payment;
+      document.querySelectorAll(".payment-option").forEach((button) => {
+        const selected = button === option;
+        button.classList.toggle("active", selected);
+        button.setAttribute("aria-pressed", String(selected));
+      });
+    }
+  });
+  document.getElementById("menu-search").addEventListener("input", (event) => {
+    query = event.target.value.trim();
+    renderProducts();
+  });
+  document.getElementById("go-checkout").addEventListener("click", () => {
+    if (quantity()) showPage("checkout");
+  });
+  document.getElementById("confirm-order").addEventListener("click", async (event) => {
+    if (!quantity()) {
+      showPage("menu");
+      return;
+    }
+
+    if (tableNumber === null) {
+      toast("Nomor meja tidak valid. Silakan pindai QR di meja Anda.");
+      return;
+    }
+
+    const name = document.getElementById("customer-name").value.trim();
+    if (!name) {
+      document.getElementById("customer-name").focus();
+      toast("Masukkan nama pelanggan terlebih dahulu.");
+      return;
+    }
+
+    const overStock = [...cart.values()].find(({ item, quantity }) => {
+      const stock = itemStock(item);
+      return stock !== null && quantity > stock;
+    });
+    if (overStock) {
+      toast(`Stok ${itemName(overStock.item)} hanya ${itemStock(overStock.item)} item. Kurangi jumlah pesanan.`);
+      return;
+    }
+
+    const selectedPayment = payment;
+
+    const items = [...cart.values()].map(({ item, quantity }) => ({
+      id_menu: Number(item.id_menu),
+      jumlah_pesanan: quantity,
+    }));
+
+    if (items.some((item) => !Number.isInteger(item.id_menu))) {
+      toast("ID menu tidak valid. Coba refresh halaman.");
+      return;
+    }
+
+    const button = event.currentTarget;
+    button.disabled = true;
+
+    try {
+      if (selectedPayment === "QRIS") {
+        const scanned = await scanQris();
+        if (!scanned) {
+          toast("Pemindaian QRIS dibatalkan. Pesanan belum dibuat.");
+          return;
+        }
+      }
+
+      const csrfResponse = await fetch("/csrf-token", {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      const csrfResult = await csrfResponse.json().catch(() => ({}));
+      if (!csrfResponse.ok || !csrfResult.token) {
+        throw new Error("Sesi pemesanan tidak dapat diperbarui. Muat ulang halaman, lalu coba lagi.");
+      }
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      if (csrfMeta) csrfMeta.content = csrfResult.token;
+
+      const response = await fetch("/api/pesanan", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": csrfResult.token,
+        },
+        body: JSON.stringify({
+  nama_pelanggan: name,
+  nomor_meja: Number(new URLSearchParams(window.location.search).get("meja")),
+  metode_pembayaran: selectedPayment,
+  catatan: document.getElementById("order-note").value.trim(),
+  items,
+}),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const validationError = Object.values(result.errors || {}).flat()[0];
+        if (response.status === 422 && String(validationError || "").toLowerCase().includes("stok")) {
+          await loadMenu();
+        }
+        if (response.status === 419) {
+          throw new Error("Sesi pemesanan kedaluwarsa. Muat ulang halaman, lalu coba lagi.");
+        }
+        throw new Error(validationError || result.message || "Pesanan gagal disimpan.");
+      }
+      if (!result.order?.order_id) throw new Error("Server tidak mengirim ID pesanan.");
+
+      lastOrderId = result.order.order_id;
+      sessionStorage.setItem("solsticeLastOrderId", lastOrderId);
+      syncTrackLastOrderButton();
+
+      document.getElementById("success-name").textContent = name;
+      document.getElementById("success-order").textContent = `#${lastOrderId}`;
+      document.getElementById("track-order").textContent = `#${lastOrderId}`;
+      document.getElementById("success-total").textContent = format(result.order.total_harga);
+      document.getElementById("success-cash-note").hidden = selectedPayment === "QRIS";
+      document.getElementById("success-qris-note").hidden = selectedPayment !== "QRIS";
+      cart.clear();
+      renderCart();
+      showPage("success");
+    } catch (error) {
+    toast(error.message || "Pesanan gagal dikirim. Coba lagi.");
+    } finally {
+    button.disabled = false;
+    }
+  });
+  document.querySelectorAll("[data-category]").forEach((button) => button.setAttribute("aria-pressed", button.classList.contains("active")));
+  renderCart();
+  loadMenu();
+  setInterval(() => {
+    const trackingPage = document.getElementById("page-tracking");
+    if (trackingPage?.classList.contains("active")) void refreshTrackingStatus();
+  }, 5000);
+})();
